@@ -4,6 +4,7 @@
 #include "parameters.hpp"
 #include "bc.hpp"
 #include "matprops.hpp"
+#include "energy_balance.hpp"
 #include "fields.hpp"
 #include "utils.hpp"
 
@@ -273,48 +274,7 @@ void update_temperature(const Param &param, const Variables &var,
         }
     }
     
-    if (param.sim.has_energy_balance) {
-        // Reset nodal terms
-        std::fill(var.powerTerm->begin(), var.powerTerm->end(), 0.0);
-        std::fill(var.pressureTerm->begin(), var.pressureTerm->end(), 0.0);
-        std::fill(var.densityTerm->begin(), var.densityTerm->end(), 0.0);
-        
-        #pragma omp parallel for default(none) shared(param, var)
-        for (int e=0; e<var.nelem; e++) {
-            const int *conn = (*var.connectivity)[e];
-            double *s = (*var.stress)[e];
-            double *edot = (*var.strain_rate)[e];
-            double& syy = (*var.stressyy)[e];
-            
-            double temp = 0;
-            for (int i = 0; i < NODES_PER_ELEM; ++i) {
-                temp += (*var.temperature)[conn[i]];
-            }
-            double T = temp / NODES_PER_ELEM;
-            
-            #ifdef THREED
-            double P = -(s[0] + s[1] + s[2]) / NDIMS;
-            double vedot = edot[0]+ edot[1] + edot[2];
-            #else
-            double P = -(s[0] + s[1] + syy) / 3;
-            double vedot = edot[0]+ edot[1];
-            #endif
-            
-            double alpha = var.mat->get_alpha(e);
-            double plastic = (*var.power)[e] * (*var.volume)[e]/NODES_PER_ELEM;
-            double pressure = T * alpha * (*var.dP)[e] * (*var.volume)[e] / NODES_PER_ELEM;
-            double den = P * T * alpha * vedot * (*var.volume)[e] * var.dt / NODES_PER_ELEM;
-            
-            for (int i = 0; i < NODES_PER_ELEM; ++i) {
-                #pragma omp atomic
-                (*var.powerTerm)[conn[i]] += plastic;
-                #pragma omp atomic
-                (*var.pressureTerm)[conn[i]] += pressure;
-                #pragma omp atomic
-                (*var.densityTerm)[conn[i]] += den;
-            }
-        }
-    }
+    EnergyBalance::compute_nodal_sources(param, var);
 
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
@@ -345,25 +305,16 @@ void update_temperature(const Param &param, const Variables &var,
            }
            
            double diffusion_term = -(tdot * var.dt) / (*var.tmass)[n];
-           double extra_term = 0;
            
            if (param.sim.has_energy_balance) {
-               double power_term = (*var.powerTerm)[n] / (*var.tmass)[n];
-               double pressure_term = (*var.pressureTerm)[n] / (*var.tmass)[n];
-               double density_term = (*var.densityTerm)[n] / (*var.tmass)[n];
-               
-               extra_term = power_term + pressure_term + density_term;
-               
-               (*var.temp_power)[n] += power_term;
-               (*var.temp_pressure)[n] += pressure_term;
-               (*var.temp_density)[n] += density_term;
-               
-               double temp_old = temperature[n];
-               temperature[n] += diffusion_term + extra_term;
-               (*var.dtemp)[n] = temperature[n] - temp_old;
-           } else {
-               temperature[n] += diffusion_term;
-           }
+                double extra_term = EnergyBalance::compute_nodal_update(param, var, n, temperature[n], var.dt);
+                
+                double temp_old = temperature[n];
+                temperature[n] += diffusion_term + extra_term;
+                (*var.dtemp)[n] = temperature[n] - temp_old;
+            } else {
+                temperature[n] += diffusion_term;
+            }
        }
    }
 #ifdef NPROF

@@ -6,6 +6,7 @@
 #include "constants.hpp"
 #include "parameters.hpp"
 #include "matprops.hpp"
+#include "energy_balance.hpp"
 #include "rheology.hpp"
 #include "utils.hpp"
 
@@ -865,7 +866,7 @@ void update_stress(const Param& param, Variables& var, tensor_t& stress,
                 double t_power = 0, v_power = 0, d_power = 0;
                 double thermal_stress_inc = 0;
                 if (param.sim.has_energy_balance) {
-                    thermal_stress_inc = -bulkm * var.mat->get_alpha(e) * dT;
+                    thermal_stress_inc = EnergyBalance::compute_thermal_stress_increment(bulkm, var.mat->get_alpha(e), dT);
                 }
 
                 if (var.mat->is_plane_strain) {
@@ -884,17 +885,12 @@ void update_stress(const Param& param, Variables& var, tensor_t& stress,
                 delta_plstrain[e] = depls;
                 
                 if (param.sim.has_energy_balance) {
-                    (*var.tenergy)[e] = t_power;
-                    (*var.venergy)[e] = v_power;
-                    (*var.denergy)[e] = d_power;
-                    (*var.power)[e] = t_power + v_power + d_power;
-                    
                     #ifdef THREED
                     double pressure_new = -(s[0] + s[1] + s[2]) / NDIMS;
                     #else
                     double pressure_new = -(s[0] + s[1] + syy) / 3.0;
                     #endif
-                    (*var.dP)[e] = pressure_new - pressure_old;
+                    EnergyBalance::record_element_contribution(var, e, t_power, v_power, d_power, pressure_new, pressure_old);
                 }
             }
             break;
