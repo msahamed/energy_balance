@@ -1,3 +1,4 @@
+#ifdef ENABLE_ENERGY_BALANCE
 #include "energy_balance.hpp"
 #include "matprops.hpp"
 #include <algorithm>
@@ -103,4 +104,74 @@ namespace EnergyBalance {
         (*var.dP)[elem_idx] = pressure_new - pressure_old;
     }
 
+// Write energy balance fields to binary output
+template<typename BinaryOutput>
+void write_binary_output(BinaryOutput& bin, const Variables& var) {
+    bin.write_array(*var.tenergy, "tenergy", var.tenergy->size());
+    bin.write_array(*var.venergy, "venergy", var.venergy->size());
+    bin.write_array(*var.denergy, "denergy", var.denergy->size());
+    bin.write_array(*var.power, "power", var.power->size());
+    bin.write_array(*var.dP, "dP", var.dP->size());
+    
+    // Nodal terms
+    bin.write_array(*var.powerTerm, "powerTerm", var.powerTerm->size());
+    bin.write_array(*var.pressureTerm, "pressureTerm", var.pressureTerm->size());
+    bin.write_array(*var.densityTerm, "densityTerm", var.densityTerm->size());
 }
+
+// Write energy balance fields to VTK output
+void write_vtk_output(std::ofstream& vtk_file, const Variables& var) {
+    // Energy balance fields (check if allocated)
+    if (var.power && !var.power->empty()) {
+        // Element data
+        vtk_file << "SCALARS tenergy double 1\n";
+        vtk_file << "LOOKUP_TABLE default\n";
+        for (int i = 0; i < var.nelem; i++) vtk_file << (*var.tenergy)[i] << "\n";
+        
+        vtk_file << "SCALARS venergy double 1\n";
+        vtk_file << "LOOKUP_TABLE default\n";
+        for (int i = 0; i < var.nelem; i++) vtk_file << (*var.venergy)[i] << "\n";
+        
+        vtk_file << "SCALARS denergy double 1\n";
+        vtk_file << "LOOKUP_TABLE default\n";
+        for (int i = 0; i < var.nelem; i++) vtk_file << (*var.denergy)[i] << "\n";
+        
+        vtk_file << "SCALARS power double 1\n";
+        vtk_file << "LOOKUP_TABLE default\n";
+        for (int i = 0; i < var.nelem; i++) vtk_file << (*var.power)[i] << "\n";
+        
+        vtk_file << "SCALARS dP double 1\n";
+        vtk_file << "LOOKUP_TABLE default\n";
+        for (int i = 0; i < var.nelem; i++) vtk_file << (*var.dP)[i] << "\n";
+    }
+    
+    if (var.powerTerm && !var.powerTerm->empty()) {
+         // Switch back to POINT_DATA for nodal fields
+         vtk_file << "POINT_DATA " << var.nnode << "\n";
+         
+         vtk_file << "SCALARS powerTerm double 1\n";
+         vtk_file << "LOOKUP_TABLE default\n";
+         for (int i = 0; i < var.nnode; i++) vtk_file << (*var.powerTerm)[i] << "\n";
+         
+         vtk_file << "SCALARS pressureTerm double 1\n";
+         vtk_file << "LOOKUP_TABLE default\n";
+         for (int i = 0; i < var.nnode; i++) vtk_file << (*var.pressureTerm)[i] << "\n";
+         
+         vtk_file << "SCALARS densityTerm double 1\n";
+         vtk_file << "LOOKUP_TABLE default\n";
+         for (int i = 0; i < var.nnode; i++) vtk_file << (*var.densityTerm)[i] << "\n";
+    }
+}
+
+} // namespace EnergyBalance
+
+// Explicit template instantiation for BinaryOutput (must be outside namespace)
+#include "binaryio.hpp"
+template void EnergyBalance::write_binary_output<BinaryOutput>(BinaryOutput& bin, const Variables& var);
+
+#ifdef HDF5
+#include "hdf5io.hpp"
+template void EnergyBalance::write_binary_output<HDF5Output>(HDF5Output& bin, const Variables& var);
+#endif
+
+#endif // ENABLE_ENERGY_BALANCE

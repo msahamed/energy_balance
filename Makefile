@@ -140,7 +140,9 @@ ifneq (, $(findstring clang++, $(CXX)))
 	
 	# macOS needs extra headerpad for install_name_tool
 	ifeq ($(OSNAME), Darwin)
-		CXXFLAGS += -isysroot $(shell xcrun --show-sdk-path) -I/opt/homebrew/include -I/opt/homebrew/opt/libomp/include
+		# Enable energy balance feature (comment out to disable)
+		CXXFLAGS += -DENABLE_ENERGY_BALANCE \
+		            -isysroot $(shell xcrun --show-sdk-path) -I/opt/homebrew/include -I/opt/homebrew/opt/libomp/include
 		LDFLAGS += -Wl,-headerpad_max_install_names -L/opt/homebrew/lib -L/opt/homebrew/opt/libomp/lib
 	endif 
 

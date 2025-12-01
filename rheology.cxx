@@ -915,29 +915,60 @@ void update_stress(const Param& param, Variables& var, tensor_t& stress,
                 for (int i=0; i<NSTR; ++i) sp[i] = s[i];
                 int failure_mode;
                 double t_power=0, v_power=0, d_power=0;
+                
+                double thermal_stress_inc = 0;
+                if (param.sim.has_energy_balance) {
+                    thermal_stress_inc = EnergyBalance::compute_thermal_stress_increment(bulkm, var.mat->get_alpha(e), dT);
+                }
+
                 if (var.mat->is_plane_strain) {
                     spyy = syy;
                     elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                      de, depls, sp, spyy, failure_mode, 
                                      param.control.has_hydraulic_diffusion, dpp,
-                                     0.0, t_power, v_power, d_power);
+                                     thermal_stress_inc, t_power, v_power, d_power);
                 }
                 else {
                     elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                    de, depls, sp, failure_mode, 
                                    param.control.has_hydraulic_diffusion, dpp,
-                                   0.0, t_power, v_power, d_power);
+                                   thermal_stress_inc, t_power, v_power, d_power);
                 }
                 double spII = second_invariant2(sp);
 
                 // use the smaller as the final stress
-                if (svII < spII)
+                if (svII < spII) {
                     for (int i=0; i<NSTR; ++i) s[i] = sv[i];
+                    // Viscous flow dominates
+                    // Reset plastic power terms as we are not using the plastic solution
+                    t_power = 0;
+                    v_power = 0;
+                    d_power = 0;
+                }
                 else {
                     for (int i=0; i<NSTR; ++i) s[i] = sp[i];
                     plstrain[e] += depls;
                     delta_plstrain[e] = depls;
                     syy = spyy;
+                    // Plastic flow dominates, t_power, v_power, d_power are already set by elasto_plastic
+                }
+                
+                if (param.sim.has_energy_balance) {
+                    // Add viscous dissipation: W_visc = J2 / viscosity
+                    // J2 = second_invariant2(s)
+                    double J2 = second_invariant2(s);
+                    double W_visc = J2 / viscosity[e];
+                    
+                    // Add viscous dissipation to deviatoric and total power
+                    d_power += W_visc;
+                    t_power += W_visc;
+                    
+                    #ifdef THREED
+                    double pressure_new = -(s[0] + s[1] + s[2]) / NDIMS;
+                    #else
+                    double pressure_new = -(s[0] + s[1] + syy) / 3.0;
+                    #endif
+                    EnergyBalance::record_element_contribution(var, e, t_power, v_power, d_power, pressure_new, pressure_old);
                 }
             }
             break;

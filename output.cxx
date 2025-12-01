@@ -13,6 +13,7 @@
 #include "output.hpp"
 #include "utils.hpp"
 #include "vtk_output.hpp"
+#include "energy_balance.hpp"
 
 #ifdef WIN32
 #ifdef _MSC_VER
@@ -27,6 +28,7 @@ Output::Output(const Param& param, int64_t start_time, int start_frame) :
     is_averaged(param.sim.is_outputting_averaged_fields),
     average_interval(param.mesh.quality_check_step_interval),
     has_marker_output(param.sim.has_marker_output),
+    has_energy_balance(param.sim.has_energy_balance),
     hdf5_compression_level(param.sim.hdf5_compression_level),
     frame(start_frame),
     time0(0)
@@ -179,6 +181,10 @@ void Output::_write(const Variables& var, bool disable_averaging)
         tmp[e] = var.mat->visc(e);
     }
     bin.write_array(tmp, "viscosity", tmp.size());
+
+    if (has_energy_balance) {
+        EnergyBalance::write_binary_output(bin, var);
+    }
 
     // bin.write_array(*var.mass, "mass", var.mass->size());
     // bin.write_array(*var.tmass, "tmass", var.tmass->size());

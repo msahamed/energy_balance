@@ -15,6 +15,7 @@
 #include "parameters.hpp"
 #include "vtk_output.hpp"
 #include "geometry.hpp"
+#include "energy_balance.hpp"
 
 namespace vtk_output {
 
@@ -243,6 +244,9 @@ void write_vtk_file(const Variables& var, int frame, double dt, const std::strin
     for (int i = 0; i < var.nelem; i++) {
         vtk_file << (*var.plstrain)[i] << "\n";
     }
+    
+    // Energy balance fields
+    EnergyBalance::write_vtk_output(vtk_file, var);
     
     vtk_file.close();
     
