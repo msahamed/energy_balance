@@ -118,6 +118,7 @@ struct Sim {
     bool has_initial_checkpoint;
     bool has_output_during_remeshing;
     bool has_marker_output;
+    bool has_energy_balance;
 
     std::string modelname;
     std::string restarting_from_modelname;
@@ -600,6 +601,23 @@ struct Variables {
     double_vec *dppressure; // delta pore pressure
     double_vec *dppressure_zero; // delta pore pressure
     double_vec *fluid_source; // injection and pumping of pore water
+
+    // Energy balance equation related variables :
+    double_vec *dtemp; // Temperature difference
+    double_vec *dP;    // Pressure difference
+    double_vec *drho;   // density difference
+    double_vec *power;
+    double_vec *tenergy;
+    double_vec *venergy;
+    double_vec *denergy;
+    double_vec *powerTerm;
+    double_vec *pressureTerm;
+    double_vec *densityTerm;
+    double_vec *thermal_energy;
+    double_vec *elastic_energy;
+    double_vec *temp_power;
+    double_vec *temp_pressure;
+    double_vec *temp_density;
     
     // For surface processes
     SurfaceInfo surfinfo;

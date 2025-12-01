@@ -12,6 +12,7 @@
 #include "matprops.hpp"
 #include "output.hpp"
 #include "utils.hpp"
+#include "vtk_output.hpp"
 
 #ifdef WIN32
 #ifdef _MSC_VER
@@ -43,7 +44,10 @@ void Output::write_info(const Variables& var, double dt)
                   frame, var.steps, var.time, dt, run_time_ns*1e-9,
                   var.nnode, var.nelem, var.nseg);
 
-    std::string filename(modelname + ".info");
+    // Get run-specific directory
+    std::string run_dir = vtk_output::get_run_directory(modelname);
+    std::string filename = run_dir + "/runs/" + modelname + ".info";
+
     std::FILE* f;
     if (frame == 0)
         f = std::fopen(filename.c_str(), "w");
@@ -80,9 +84,13 @@ void Output::_write(const Variables& var, bool disable_averaging)
         inv_dt = 1.0 / (var.time - time0);
     }
 
-    char filename[256];
+    // Ensure output directories exist
+    vtk_output::setup_output_directories(modelname);
+    std::string run_dir = vtk_output::get_run_directory(modelname);
+
+    char filename[512];
 #ifdef HDF5
-    std::snprintf(filename, 255, "%s.save.%06d.vtkhdf", modelname.c_str(), frame);
+    std::snprintf(filename, 511, "%s/runs/%s.save.%06d.vtkhdf", run_dir.c_str(), modelname.c_str(), frame);
     HDF5Output bin(filename, hdf5_compression_level);
 
     bin.write_block_metadata(var, "grid");
@@ -90,7 +98,7 @@ void Output::_write(const Variables& var, bool disable_averaging)
     bin.write_fieldData(var.steps, "steps");
     bin.write_fieldData(double(run_time_ns) * 1e-9, "walltime_sec");
 #else
-    std::snprintf(filename, 255, "%s.save.%06d", modelname.c_str(), frame);
+    std::snprintf(filename, 511, "%s/runs/%s.save.%06d", run_dir.c_str(), modelname.c_str(), frame);
     BinaryOutput bin(filename);
 
     bin.write_array(*var.coord, "coordinate", var.coord->size());
@@ -200,6 +208,9 @@ void Output::_write(const Variables& var, bool disable_averaging)
             (*ms)->write_save_file(var, bin);
         }
     }
+
+    // Also write VTK output
+    vtk_output::write_vtk_file(var, frame, dt, modelname);
 
     write_info(var, dt);
 
@@ -319,9 +330,13 @@ void Output::write_checkpoint(const Param& param, const Variables& var)
 #ifdef NPROF
     nvtxRangePush(__FUNCTION__);
 #endif
-    char filename[256];
+    // Ensure output directories exist
+    vtk_output::setup_output_directories(modelname);
+    std::string run_dir = vtk_output::get_run_directory(modelname);
+
+    char filename[512];
 #ifdef HDF5
-    std::snprintf(filename, 255, "%s.chkpt.%06d.vtkhdf", modelname.c_str(), frame);
+    std::snprintf(filename, 511, "%s/runs/%s.chkpt.%06d.vtkhdf", run_dir.c_str(), modelname.c_str(), frame);
     HDF5Output bin(filename, hdf5_compression_level, true);
 
     bin.write_block_metadata(var, "grid");
@@ -330,7 +345,7 @@ void Output::write_checkpoint(const Param& param, const Variables& var)
     bin.write_scalar(var.compensation_pressure, "compensation_pressure");
     bin.write_scalar(var.bottom_temperature, "bottom_temperature");
 #else
-    std::snprintf(filename, 255, "%s.chkpt.%06d", modelname.c_str(), frame);
+    std::snprintf(filename, 511, "%s/runs/%s.chkpt.%06d", run_dir.c_str(), modelname.c_str(), frame);
     BinaryOutput bin(filename);
 
     double_vec tmp(3);

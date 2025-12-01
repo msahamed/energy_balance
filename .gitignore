@@ -27,3 +27,5 @@ test
 *.log
 *.tsm
 external
+output
+.DS_Store

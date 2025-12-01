@@ -30,6 +30,8 @@ public:
     double cp(int e) const;
     #pragma acc routine seq
     double k(int e) const;
+    #pragma acc routine seq
+    double get_alpha(int e) const;
 
     // hydraulic parameter function
     #pragma acc routine seq

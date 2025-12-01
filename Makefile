@@ -24,7 +24,7 @@
 ##  - use_R_S = 1 : enable Rate-and-State friction (requires adaptive_time_step).
 ##  - useexo = 1 : enable ExodusII import support (3D only; requires seacas/exodus libs).
 
-ndims = 3
+ndims = 2
 opt = 2
 openacc = 0
 openmp = 1
@@ -58,7 +58,7 @@ else
 		# Select compiler based on platform
 		ifeq ($(OSNAME), Darwin)
 			# clang++ is the default optimized compiler for macOS
-			CXX = clang++
+			CXX = /usr/bin/clang++
 		else
 			CXX = g++
 		endif
@@ -140,7 +140,8 @@ ifneq (, $(findstring clang++, $(CXX)))
 	
 	# macOS needs extra headerpad for install_name_tool
 	ifeq ($(OSNAME), Darwin)
-		LDFLAGS += -Wl,-headerpad_max_install_names
+		CXXFLAGS += -isysroot $(shell xcrun --show-sdk-path) -I/opt/homebrew/include -I/opt/homebrew/opt/libomp/include
+		LDFLAGS += -Wl,-headerpad_max_install_names -L/opt/homebrew/lib -L/opt/homebrew/opt/libomp/lib
 	endif 
 
 	ifeq ($(opt), 1)
@@ -325,7 +326,8 @@ SRCS =	\
 	remeshing.cxx \
 	rheology.cxx \
 	markerset.cxx \
-	knn.cxx
+	knn.cxx \
+	vtk_output.cxx
 
 INCS =	\
 	array2d.hpp \
@@ -339,7 +341,8 @@ INCS =	\
 	mesh.hpp \
 	markerset.hpp \
 	output.hpp \
-	knn.hpp
+	knn.hpp \
+	vtk_output.hpp
 
 OBJS = $(SRCS:.cxx=.$(ndims)d$(suffix).o)
 

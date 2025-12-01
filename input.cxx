@@ -62,6 +62,8 @@ static void declare_parameters(po::options_description &cfg,
          "Output marker coordinate and material?")
         ("sim.has_output_during_remeshing", po::value<bool>(&p.sim.has_output_during_remeshing)->default_value(false),
          "Output immediately before and after remeshing?")
+        ("sim.has_energy_balance", po::value<bool>(&p.sim.has_energy_balance)->default_value(false),
+         "Calculate energy balance equation?")
         ("sim.is_outputting_averaged_fields", po::value<bool>(&p.sim.is_outputting_averaged_fields)->default_value(true),
          "Output time-averaged (smoothed) field variables or not. These fields are: velocity, strain rate, and stress.\n"
          "no: output instantaneous fields. The velocity and strain-rate might oscillate temporally.\n"

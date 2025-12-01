@@ -259,7 +259,9 @@ static void elasto_plastic(double bulkm, double shearm,
                            const double* de, double& depls, double* s,
                            int &failure_mode,
                            bool has_hydraulic_diffusion,
-                           double &dpp)
+                           double &dpp,
+                           double thermal_stress_inc,
+                           double& t_power, double& v_power, double& d_power)
 {
     /* Elasto-plasticity (Mohr-Coulomb criterion)
      *
@@ -278,6 +280,9 @@ static void elasto_plastic(double bulkm, double shearm,
     {
         elastic(bulkm, shearm, de, s);
     }
+    
+    // Add thermal stress increment
+    for (int i=0; i<NDIMS; ++i) s[i] += thermal_stress_inc;
     depls = 0;
     failure_mode = 0;
 
@@ -384,6 +389,48 @@ static void elasto_plastic(double bulkm, double shearm,
         depls = std::fabs(alam) * std::sqrt(3. / 8);
 #endif
     }
+    
+    // Calculate power terms
+    double depls1 = 0, depls2 = 0, depls3 = 0;
+    if (failure_mode >= 10) { // Shear failure
+        // Assuming plastic potential depends on sigma1 and sigma3 only, so depls2 = 0
+        // alam is calculated above
+        double alam = fs / (a1 - a2*anpsi + a1*anphi*anpsi - a2*anphi + 2*std::sqrt(anphi)*hardn);
+        depls1 = alam;
+        depls3 = -alam * anpsi;
+    } else if (failure_mode == 1) { // Tensile failure
+        double alam = ft / a1;
+        depls3 = alam;
+    }
+    
+    double deplsm = (depls1 + depls2 + depls3) / NDIMS;
+    double vstress = 0;
+    for (int i=0; i<NDIMS; ++i) vstress += p[i];
+    vstress /= NDIMS;
+    
+    t_power = p[0]*depls1;
+    #ifdef THREED
+    t_power += p[1]*depls2 + p[2]*depls3;
+    #else
+    t_power += p[1]*depls3; // In 2D p[1] is the second principal stress (sigma3 equivalent?) 
+    // Wait, in 2D p has 2 elements. p[0] and p[1].
+    // If failure_mode is shear, p[0] and p[1] are involved.
+    // If NDIMS=2, p has 2 elements.
+    // My depls calculation above assumed 3 components (1, 2, 3).
+    // In 2D, we have p[0] and p[1].
+    // If shear failure: p[0] is sigma1, p[1] is sigma3.
+    // depls1 corresponds to p[0], depls3 corresponds to p[1].
+    // So t_power = p[0]*depls1 + p[1]*depls3.
+    #endif
+    
+    v_power = vstress * (depls1 + depls2 + depls3);
+    
+    d_power = (p[0]-vstress)*(depls1-deplsm);
+    #ifdef THREED
+    d_power += (p[1]-vstress)*(depls2-deplsm) + (p[2]-vstress)*(depls3-deplsm);
+    #else
+    d_power += (p[1]-vstress)*(depls3-deplsm);
+    #endif
 
     // rotate the principal stresses back to global axes
     {
@@ -420,7 +467,9 @@ static void elasto_plastic2d(double bulkm, double shearm,
                              double* s, double &syy,
                              int &failure_mode,
                              bool has_hydraulic_diffusion,
-                             double &dpp)
+                             double &dpp,
+                             double thermal_stress_inc,
+                             double& t_power, double& v_power, double& d_power)
 {
     /* Elasto-plasticity (Mohr-Coulomb criterion) */
 
@@ -442,14 +491,17 @@ static void elasto_plastic2d(double bulkm, double shearm,
 
     depls = 0;
     failure_mode = 0;
+    t_power = 0;
+    v_power = 0;
+    d_power = 0;
 
     // elastic trial stress
     double a1 = bulkm + 4. / 3 * shearm;
     double a2 = bulkm - 2. / 3 * shearm;
-    double sxx = s[0] + de[1]*a2 + de[0]*a1;
-    double szz = s[1] + de[0]*a2 + de[1]*a1;
+    double sxx = s[0] + de[1]*a2 + de[0]*a1 + thermal_stress_inc;
+    double szz = s[1] + de[0]*a2 + de[1]*a1 + thermal_stress_inc;
     double sxz = s[2] + de[2]*2*shearm;
-    syy += (de[0] + de[1]) * a2; // Stress YY component, plane strain
+    syy += (de[0] + de[1]) * a2 + thermal_stress_inc; // Stress YY component, plane strain
 
     // Apply the pore pressure effect if hydraulic diffusion is enabled
     if (has_hydraulic_diffusion)
@@ -584,6 +636,16 @@ static void elasto_plastic2d(double bulkm, double shearm,
 
     // 2nd invariant of plastic strain
     depls = 0.5 * std::fabs(alams + alams * anpsi);
+    
+    // Power calculation
+    double depls1 = alams;
+    double depls3 = -alams * anpsi;
+    double deplsm = (depls1 + depls3) / 3.0;
+    double vstress = (p[0] + p[1] + p[2]) / 3.0;
+    
+    t_power = p[0]*depls1 + p[2]*depls3;
+    v_power = vstress * deplsm;
+    d_power = (p[0]-vstress)*(depls1-deplsm) + (p[1]-vstress)*(-deplsm) + (p[2]-vstress)*(depls3-deplsm);
 
     //***********************************
     // The following seems redundant but... this is how it goes in geoFLAC.
@@ -626,6 +688,24 @@ static void elasto_plastic2d(double bulkm, double shearm,
         s[2] = 0.5 * (p[n1] - p[n2]) * sin2t;
         syy = p[n3];
     }
+    
+    // Calculate power terms
+    // Reconstruct plastic strains
+    depls1 = 0; depls3 = 0;
+    if (failure_mode >= 10) { // Shear failure
+        // alams was calculated as:
+        // const double alams = fs / (a1 - a2*anpsi + a1*anphi*anpsi - a2*anphi + hardn);
+        // We need to recalculate or store it. 
+        // Since we can't easily store it without changing structure significantly, let's recalculate if needed or use the fact that we know the stress change.
+        // Actually, we can just use the stress change to back-calculate plastic strain?
+        // No, easier to just replicate the alams calculation if we are in shear failure.
+        // But fs has changed.
+        // Let's rely on the fact that we are inside the function and can just compute it before returning.
+        // Wait, I can't easily access alams here because it was a local variable in a block.
+        // I should move the power calculation INSIDE the shear failure block or lift alams out.
+        // But there are multiple return points.
+        // I will initialize powers to 0 at start.
+    }
 }
 
 void update_stress(const Param& param, Variables& var, tensor_t& stress,
@@ -648,6 +728,14 @@ void update_stress(const Param& param, Variables& var, tensor_t& stress,
         const int *conn = (*var.connectivity)[e];
         double pp_element = 0.0;
         double dpp_element = 0.0;
+        double dT = 0.0;
+        
+        if (param.sim.has_energy_balance) {
+            for (int i = 0; i < NODES_PER_ELEM; ++i) {
+                dT += (*var.dtemp)[conn[i]];
+            }
+            dT /= NODES_PER_ELEM;
+        }
 
         const array_t& vel = *var.vel;
         double vx_element = 0.0, vy_element = 0.0, vz_element = 0.0;
@@ -725,6 +813,13 @@ void update_stress(const Param& param, Variables& var, tensor_t& stress,
             de[i] = edot[i] * var.dt;
         }
 
+        double pressure_old = 0;
+        #ifdef THREED
+        pressure_old = -(s[0] + s[1] + s[2]) / NDIMS;
+        #else
+        pressure_old = -(s[0] + s[1] + syy) / 3.0;
+        #endif
+
         switch (param.mat.rheol_type) {
         case MatProps::rh_elastic:
             {
@@ -766,18 +861,41 @@ void update_stress(const Param& param, Variables& var, tensor_t& stress,
                 var.mat->plastic_props(e, plstrain[e],
                                        amc, anphi, anpsi, hardn, ten_max);
                 int failure_mode;
+                
+                double t_power = 0, v_power = 0, d_power = 0;
+                double thermal_stress_inc = 0;
+                if (param.sim.has_energy_balance) {
+                    thermal_stress_inc = -bulkm * var.mat->get_alpha(e) * dT;
+                }
+
                 if (var.mat->is_plane_strain) {
                     elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                      de, depls, s, syy, failure_mode, 
-                                     param.control.has_hydraulic_diffusion, dpp);
+                                     param.control.has_hydraulic_diffusion, dpp,
+                                     thermal_stress_inc, t_power, v_power, d_power);
                 }
                 else {
                     elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                    de, depls, s, failure_mode, 
-                                   param.control.has_hydraulic_diffusion, dpp);
+                                   param.control.has_hydraulic_diffusion, dpp,
+                                   thermal_stress_inc, t_power, v_power, d_power);
                 }
                 plstrain[e] += depls;
                 delta_plstrain[e] = depls;
+                
+                if (param.sim.has_energy_balance) {
+                    (*var.tenergy)[e] = t_power;
+                    (*var.venergy)[e] = v_power;
+                    (*var.denergy)[e] = d_power;
+                    (*var.power)[e] = t_power + v_power + d_power;
+                    
+                    #ifdef THREED
+                    double pressure_new = -(s[0] + s[1] + s[2]) / NDIMS;
+                    #else
+                    double pressure_new = -(s[0] + s[1] + syy) / 3.0;
+                    #endif
+                    (*var.dP)[e] = pressure_new - pressure_old;
+                }
             }
             break;
         case MatProps::rh_evp:
@@ -800,16 +918,19 @@ void update_stress(const Param& param, Variables& var, tensor_t& stress,
                 double sp[NSTR], spyy;
                 for (int i=0; i<NSTR; ++i) sp[i] = s[i];
                 int failure_mode;
+                double t_power=0, v_power=0, d_power=0;
                 if (var.mat->is_plane_strain) {
                     spyy = syy;
                     elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                      de, depls, sp, spyy, failure_mode, 
-                                     param.control.has_hydraulic_diffusion, dpp);
+                                     param.control.has_hydraulic_diffusion, dpp,
+                                     0.0, t_power, v_power, d_power);
                 }
                 else {
                     elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                    de, depls, sp, failure_mode, 
-                                   param.control.has_hydraulic_diffusion, dpp);
+                                   param.control.has_hydraulic_diffusion, dpp,
+                                   0.0, t_power, v_power, d_power);
                 }
                 double spII = second_invariant2(sp);
 
@@ -843,15 +964,18 @@ void update_stress(const Param& param, Variables& var, tensor_t& stress,
                 var.mat->plastic_props_rsf(e, plstrain[e],
                                        amc, anphi, anpsi, hardn, ten_max, slip_rate);
                 int failure_mode;
+                double t_power=0, v_power=0, d_power=0;
                 if (var.mat->is_plane_strain) {
                     elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                      de, depls, s, syy, failure_mode, 
-                                     param.control.has_hydraulic_diffusion, dpp);
+                                     param.control.has_hydraulic_diffusion, dpp,
+                                     0.0, t_power, v_power, d_power);
                 }
                 else {
                     elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                    de, depls, s, failure_mode, 
-                                   param.control.has_hydraulic_diffusion, dpp);
+                                   param.control.has_hydraulic_diffusion, dpp,
+                                   0.0, t_power, v_power, d_power);
                 }
                 plstrain[e] += depls;
                 delta_plstrain[e] = depls;
@@ -886,16 +1010,19 @@ void update_stress(const Param& param, Variables& var, tensor_t& stress,
                 double sp[NSTR], spyy;
                 for (int i=0; i<NSTR; ++i) sp[i] = s[i];
                 int failure_mode;
+                double t_power=0, v_power=0, d_power=0;
                 if (var.mat->is_plane_strain) {
                     spyy = syy;
                     elasto_plastic2d(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                      de, depls, sp, spyy, failure_mode, 
-                                     param.control.has_hydraulic_diffusion, dpp);
+                                     param.control.has_hydraulic_diffusion, dpp,
+                                     0.0, t_power, v_power, d_power);
                 }
                 else {
                     elasto_plastic(bulkm, shearm, amc, anphi, anpsi, hardn, ten_max,
                                    de, depls, sp, failure_mode, 
-                                   param.control.has_hydraulic_diffusion, dpp);
+                                   param.control.has_hydraulic_diffusion, dpp,
+                                   0.0, t_power, v_power, d_power);
                 }
                 double spII = second_invariant2(sp);
 

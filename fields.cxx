@@ -56,6 +56,40 @@ void allocate_variables(const Param &param, Variables& var)
 //         var.Failure_mode = new double_vec(e);
 // #endif
     }
+    
+    if (param.sim.has_energy_balance) {
+        var.dtemp = new double_vec(n);
+        var.dP    = new double_vec(e);
+        var.drho  = new double_vec(e);
+        var.power    = new double_vec(e);
+        var.tenergy    = new double_vec(e);
+        var.venergy    = new double_vec(e);
+        var.denergy    = new double_vec(e);
+        var.powerTerm  = new double_vec(n);
+        var.pressureTerm     = new double_vec(n);
+        var.densityTerm      = new double_vec(n);
+        var.thermal_energy = new double_vec(e);
+        var.elastic_energy = new double_vec(e);
+        var.temp_power=new double_vec(n);
+        var.temp_pressure = new double_vec(n);
+        var.temp_density = new double_vec(n);
+    } else {
+        var.dtemp = nullptr;
+        var.dP = nullptr;
+        var.drho = nullptr;
+        var.power = nullptr;
+        var.tenergy = nullptr;
+        var.venergy = nullptr;
+        var.denergy = nullptr;
+        var.powerTerm = nullptr;
+        var.pressureTerm = nullptr;
+        var.densityTerm = nullptr;
+        var.thermal_energy = nullptr;
+        var.elastic_energy = nullptr;
+        var.temp_power = nullptr;
+        var.temp_pressure = nullptr;
+        var.temp_density = nullptr;
+    }
 
     var.ntmp = new double_vec(n);
     var.dpressure = new double_vec(e, 0);
@@ -147,6 +181,24 @@ void reallocate_variables(const Param& param, Variables& var)
     delete var.mat;
     var.mat = new MatProps(param, var);
 
+    if (param.sim.has_energy_balance) {
+        delete var.dtemp; var.dtemp = new double_vec(n);
+        delete var.dP; var.dP = new double_vec(e);
+        delete var.drho; var.drho = new double_vec(e);
+        delete var.power; var.power = new double_vec(e);
+        delete var.tenergy; var.tenergy = new double_vec(e);
+        delete var.venergy; var.venergy = new double_vec(e);
+        delete var.denergy; var.denergy = new double_vec(e);
+        delete var.powerTerm; var.powerTerm = new double_vec(n);
+        delete var.pressureTerm; var.pressureTerm = new double_vec(n);
+        delete var.densityTerm; var.densityTerm = new double_vec(n);
+        delete var.thermal_energy; var.thermal_energy = new double_vec(e);
+        delete var.elastic_energy; var.elastic_energy = new double_vec(e);
+        delete var.temp_power; var.temp_power = new double_vec(n);
+        delete var.temp_pressure; var.temp_pressure = new double_vec(n);
+        delete var.temp_density; var.temp_density = new double_vec(n);
+    }
+
 }
 
 
@@ -220,17 +272,100 @@ void update_temperature(const Param &param, const Variables &var,
             }
         }
     }
+    
+    if (param.sim.has_energy_balance) {
+        // Reset nodal terms
+        std::fill(var.powerTerm->begin(), var.powerTerm->end(), 0.0);
+        std::fill(var.pressureTerm->begin(), var.pressureTerm->end(), 0.0);
+        std::fill(var.densityTerm->begin(), var.densityTerm->end(), 0.0);
+        
+        #pragma omp parallel for default(none) shared(param, var)
+        for (int e=0; e<var.nelem; e++) {
+            const int *conn = (*var.connectivity)[e];
+            double *s = (*var.stress)[e];
+            double *edot = (*var.strain_rate)[e];
+            double& syy = (*var.stressyy)[e];
+            
+            double temp = 0;
+            for (int i = 0; i < NODES_PER_ELEM; ++i) {
+                temp += (*var.temperature)[conn[i]];
+            }
+            double T = temp / NODES_PER_ELEM;
+            
+            #ifdef THREED
+            double P = -(s[0] + s[1] + s[2]) / NDIMS;
+            double vedot = edot[0]+ edot[1] + edot[2];
+            #else
+            double P = -(s[0] + s[1] + syy) / 3;
+            double vedot = edot[0]+ edot[1];
+            #endif
+            
+            double alpha = var.mat->get_alpha(e);
+            double plastic = (*var.power)[e] * (*var.volume)[e]/NODES_PER_ELEM;
+            double pressure = T * alpha * (*var.dP)[e] * (*var.volume)[e] / NODES_PER_ELEM;
+            double den = P * T * alpha * vedot * (*var.volume)[e] * var.dt / NODES_PER_ELEM;
+            
+            for (int i = 0; i < NODES_PER_ELEM; ++i) {
+                #pragma omp atomic
+                (*var.powerTerm)[conn[i]] += plastic;
+                #pragma omp atomic
+                (*var.pressureTerm)[conn[i]] += pressure;
+                #pragma omp atomic
+                (*var.densityTerm)[conn[i]] += den;
+            }
+        }
+    }
 
     // Combining temperature update and bc in the same loop for efficiency,
     // since only the top boundary has Dirichlet bc, and all the other boundaries
     // have no heat flux bc.
-//    #pragma omp parallel for default(none) shared(var, param, tdot, temperature)
-//    for (int n=0; n<var.nnode; ++n) {
-//        if ((*var.bcflag)[n] & BOUNDZ1)
-//            temperature[n] = param.bc.surface_temperature;
-//        else
-//            temperature[n] -= tdot[n] * var.dt / (*var.tmass)[n];
-//    }
+   #pragma omp parallel for default(none) shared(var, param, temperature, tmp_result)
+   for (int n=0; n<var.nnode; ++n) {
+       if ((*var.bcflag)[n] & BOUNDZ1) {
+           temperature[n] = param.bc.surface_temperature;
+           if (param.sim.has_energy_balance) {
+               (*var.temp_power)[n] = param.bc.surface_temperature;
+               (*var.temp_pressure)[n] = param.bc.surface_temperature;
+               (*var.temp_density)[n] = param.bc.surface_temperature;
+               (*var.dtemp)[n] = 0;
+           }
+       }
+       else {
+           double tdot = 0;
+           for( auto e = (*var.support)[n].begin(); e < (*var.support)[n].end(); ++e) {
+               const int *conn = (*var.connectivity)[*e];
+               const double *tr = tmp_result[*e];
+               bool found = false;
+               for (int i=0;i<NODES_PER_ELEM&&!found;i++) {
+                   if (n == conn[i]) {
+                       tdot += tr[i];
+                       found= true;
+                   }
+               }
+           }
+           
+           double diffusion_term = -(tdot * var.dt) / (*var.tmass)[n];
+           double extra_term = 0;
+           
+           if (param.sim.has_energy_balance) {
+               double power_term = (*var.powerTerm)[n] / (*var.tmass)[n];
+               double pressure_term = (*var.pressureTerm)[n] / (*var.tmass)[n];
+               double density_term = (*var.densityTerm)[n] / (*var.tmass)[n];
+               
+               extra_term = power_term + pressure_term + density_term;
+               
+               (*var.temp_power)[n] += power_term;
+               (*var.temp_pressure)[n] += pressure_term;
+               (*var.temp_density)[n] += density_term;
+               
+               double temp_old = temperature[n];
+               temperature[n] += diffusion_term + extra_term;
+               (*var.dtemp)[n] = temperature[n] - temp_old;
+           } else {
+               temperature[n] += diffusion_term;
+           }
+       }
+   }
 #ifdef NPROF
     nvtxRangePop();
 #endif

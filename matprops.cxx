@@ -457,6 +457,12 @@ double MatProps::k(int e) const
     return arithmetic_mean(therm_cond, elemmarkers[e]);
 }
 
+
+double MatProps::get_alpha(int e) const
+{
+    return arithmetic_mean(alpha, elemmarkers[e]);
+}
+
 // hydraulic parameters
 double MatProps::phi(int e) const
 {
