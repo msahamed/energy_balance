@@ -1,0 +1,318 @@
+# MATERIAL PARAMETERS FROM LITERATURE
+# For Subduction Zone Modeling (Tonga-style)
+# Updated: 2025-12-03
+# Primary Sources: Hirth & Kohlstedt (2003, 2004), Peng et al. (2024)
+
+================================================================================
+RHEOLOGICAL PARAMETERS - OLIVINE FLOW LAWS
+================================================================================
+
+Reference: Hirth, G., & Kohlstedt, D. (2003). Rheology of the upper mantle
+and the mantle wedge: A view from the experimentalists.
+In Inside the Subduction Factory (pp. 83-105).
+
+--------------------------------------------------------------------------------
+DISLOCATION CREEP (Power-law, dominant in mantle)
+--------------------------------------------------------------------------------
+
+General Form: ε̇ = A * σⁿ * exp(-(E + PV)/RT)
+
+Where:
+  ε̇ = strain rate
+  σ = differential stress
+  n = stress exponent
+  E = activation energy
+  P = pressure
+  V = activation volume
+  R = gas constant (8.314 J/mol/K)
+  T = temperature (K)
+
+DRY OLIVINE (Oceanic Lithosphere/Slab):
+  Stress exponent (n):         3.5 ± 0.5
+  Activation energy (E):       530 kJ/mol = 5.3 × 10⁵ J/mol
+  Activation volume (V):       14-18 cm³/mol (often use 0 for simplicity)
+  Pre-exponential factor (A):  1.1 × 10⁵ MPa⁻ⁿ s⁻¹
+
+  Viscosity at 100 km depth:   ~10²¹ Pa·s (cold slab)
+
+WET OLIVINE (Mantle Wedge):
+  Stress exponent (n):         3.5 ± 0.5
+  Activation energy (E):       480 kJ/mol = 4.8 × 10⁵ J/mol
+  Activation volume (V):       11 cm³/mol (often use 0)
+  Pre-exponential factor (A):  1.6 × 10³ MPa⁻ⁿ s⁻¹
+
+  Viscosity at 100 km depth:   ~10¹⁹ Pa·s (10× lower than dry)
+  Wedge can be 10-100× lower:  ~10¹⁸-10¹⁹ Pa·s
+
+STANDARD VALUES FOR MODELING (Hirth & Kohlstedt 2003):
+  visc_exponent:               3.5
+  visc_activation_energy:      5.0 × 10⁵ J/mol (500 kJ/mol)
+  visc_activation_volume:      0.0 (or 1.0-1.5 × 10⁻⁵ m³/mol if included)
+  min_viscosity:               1 × 10¹⁹ Pa·s (wet) or 1 × 10²⁰ Pa·s (dry)
+  max_viscosity:               1 × 10²⁴ Pa·s
+
+--------------------------------------------------------------------------------
+DIFFUSION CREEP (Linear, dominant at small grain sizes)
+--------------------------------------------------------------------------------
+
+DRY OLIVINE:
+  Stress exponent (n):         1.0
+  Activation energy (E):       375 kJ/mol = 3.75 × 10⁵ J/mol
+  Grain-size exponent (p):     3
+
+WET OLIVINE:
+  Stress exponent (n):         1.0
+  Activation energy (E):       335 kJ/mol = 3.35 × 10⁵ J/mol
+  Grain-size exponent (p):     3
+
+Note: Diffusion creep typically less important in subduction zones
+      where stresses are high (dislocation creep dominates)
+
+================================================================================
+ELASTIC PARAMETERS
+================================================================================
+
+Reference: Turcotte & Schubert (2014), Geodynamics
+
+MANTLE (Olivine-dominated):
+  Bulk modulus (K):            50-70 GPa = 5.0-7.0 × 10¹⁰ Pa
+  Shear modulus (G):           30-80 GPa = 3.0-8.0 × 10¹⁰ Pa
+  Young's modulus (E):         ~160 GPa
+  Poisson's ratio (ν):         0.25-0.30
+
+OCEANIC CRUST (Basalt/Gabbro):
+  Bulk modulus (K):            50-60 GPa = 5.0-6.0 × 10¹⁰ Pa
+  Shear modulus (G):           30-40 GPa = 3.0-4.0 × 10¹⁰ Pa
+
+STANDARD VALUES FOR MODELING:
+  bulk_modulus:                5.0 × 10¹⁰ Pa (50 GPa)
+  shear_modulus:               3.0 × 10¹⁰ Pa (30 GPa)
+
+================================================================================
+THERMAL PARAMETERS
+================================================================================
+
+Reference: Turcotte & Schubert (2014), Clauser & Huenges (1995)
+
+MANTLE (Peridotite):
+  Density (ρ₀):                3300 kg/m³ (upper mantle)
+                               3400 kg/m³ (lower mantle, 410+ km)
+  Thermal expansion (α):       3.0 × 10⁻⁵ K⁻¹
+  Heat capacity (Cp):          1000-1200 J/kg/K
+  Thermal conductivity (k):    3.0-4.0 W/m/K
+                               Temperature dependent: k = k₀ + A/T
+                               k₀ = 0.73 W/m/K, A = 1293 W/m
+
+OCEANIC CRUST (Basalt/Gabbro):
+  Density (ρ₀):                2900-3000 kg/m³
+  Thermal expansion (α):       2.8-3.0 × 10⁻⁵ K⁻¹
+  Heat capacity (Cp):          1000 J/kg/K
+  Thermal conductivity (k):    2.0-2.5 W/m/K
+
+SEDIMENTS (if included):
+  Density (ρ₀):                2500-2700 kg/m³
+  Thermal conductivity (k):    1.5-2.5 W/m/K
+  Heat capacity (Cp):          1000 J/kg/K
+
+STANDARD VALUES FOR MODELING:
+  rho0:                        3300 kg/m³ (mantle), 3000 kg/m³ (crust)
+  alpha:                       3.0 × 10⁻⁵ K⁻¹
+  heat_capacity:               1000 J/kg/K
+  therm_cond:                  3.3 W/m/K (mantle), 2.5 W/m/K (crust)
+
+================================================================================
+PLASTIC PARAMETERS (Mohr-Coulomb)
+================================================================================
+
+Reference: Ranalli (1995), Byerlee (1978)
+
+GENERAL CRUST:
+  Cohesion (initial):          10-40 MPa = 1.0-4.0 × 10⁷ Pa
+  Cohesion (final):            1-4 MPa = 1.0-4.0 × 10⁶ Pa
+  Friction angle:              30° (Byerlee's law)
+  Internal friction coef:      μ = tan(30°) ≈ 0.58
+
+MANTLE:
+  Cohesion (initial):          40-100 MPa = 4.0-10.0 × 10⁷ Pa
+  Cohesion (final):            4-10 MPa = 4.0-10.0 × 10⁶ Pa
+  Friction angle:              30° (can be 15-35°)
+
+WEAK ZONES (faults, shear zones):
+  Cohesion:                    0.1-1 MPa = 1.0-10.0 × 10⁵ Pa
+  Friction angle:              5-15° (very weak)
+
+STRAIN WEAKENING:
+  Plastic strain range:        0.0 to 0.1-0.5
+
+DILATION:
+  Dilation angle:              0° (volume conserving, typical for deep processes)
+
+STANDARD VALUES FOR MODELING:
+  cohesion0:                   4.0 × 10⁷ Pa (40 MPa) - initial
+  cohesion1:                   4.0 × 10⁶ Pa (4 MPa) - final
+  friction_angle0:             30° (initial)
+  friction_angle1:             30° (final, or 15° for weakening)
+  dilation_angle0:             0° (no dilation)
+  dilation_angle1:             0°
+  pls0:                        0.0 (start of weakening)
+  pls1:                        0.1 (end of weakening)
+
+================================================================================
+MATERIAL TYPE CONFIGURATIONS
+================================================================================
+
+For a 2-material model (your current setup):
+
+MATERIAL 0: OCEANIC LITHOSPHERE (Subducting Slab)
+  # Rheology - DRY olivine (cold, strong)
+  visc_exponent =              3.5
+  visc_coefficient =           1.25e-1  # Calibrated for your code
+  visc_activation_energy =     5.3e5   # 530 kJ/mol (dry olivine)
+  visc_activation_volume =     0.0     # Simplified
+  min_viscosity =              1e20    # Cold slab (10× higher than wedge)
+
+  # Elastic
+  bulk_modulus =               5.0e10  # 50 GPa
+  shear_modulus =              3.0e10  # 30 GPa
+
+  # Thermal
+  rho0 =                       3300    # kg/m³
+  alpha =                      3.0e-5  # K⁻¹
+  heat_capacity =              1000    # J/kg/K
+  therm_cond =                 3.3     # W/m/K
+
+  # Plastic
+  cohesion0 =                  4.0e7   # 40 MPa
+  cohesion1 =                  4.0e6   # 4 MPa
+  friction_angle0 =            30      # degrees
+  friction_angle1 =            30      # degrees
+
+MATERIAL 1: MANTLE (Wedge + Deep Mantle)
+  # Rheology - WET olivine (hot, weak wedge)
+  visc_exponent =              3.5
+  visc_coefficient =           1.25e-1  # Calibrated
+  visc_activation_energy =     4.8e5   # 480 kJ/mol (wet olivine)
+  visc_activation_volume =     0.0
+  min_viscosity =              1e19    # Wet mantle wedge
+
+  # Same elastic, thermal, plastic as Material 0
+  # (or slightly weaker for wedge deformation)
+
+--------------------------------------------------------------------------------
+
+For a 3-material model (more realistic):
+
+MATERIAL 0: OCEANIC CRUST (Basalt/Gabbro)
+  # Weaker than lithosphere, can have lower activation energy
+  visc_exponent =              3.5
+  visc_activation_energy =     4.0e5   # 400 kJ/mol (weaker than mantle)
+  rho0 =                       3000    # kg/m³ (lighter)
+  therm_cond =                 2.5     # W/m/K (lower)
+  cohesion0 =                  2.0e7   # 20 MPa (weaker)
+  cohesion1 =                  2.0e6   # 2 MPa
+
+MATERIAL 1: OCEANIC MANTLE LITHOSPHERE (Slab)
+  # Same as Material 0 in 2-material model (dry, strong)
+  visc_activation_energy =     5.3e5   # 530 kJ/mol
+  min_viscosity =              1e20
+  rho0 =                       3300
+
+MATERIAL 2: ASTHENOSPHERIC MANTLE (Wedge + Deep)
+  # Same as Material 1 in 2-material model (wet, weak)
+  visc_activation_energy =     4.8e5   # 480 kJ/mol
+  min_viscosity =              1e19
+  rho0 =                       3300
+
+================================================================================
+TONGA SUBDUCTION ZONE SPECIFIC VALUES
+================================================================================
+
+Reference: Peng et al. (2024), JGR Solid Earth; Tonga tomography studies
+
+SLAB CHARACTERISTICS:
+  Age:                         120-140 Ma (old, cold)
+  Convergence rate:            15-23 cm/yr (fastest worldwide)
+  Dip angle:                   45-60° (steep)
+  Temperature at 100 km:       ~700-900 K (very cold)
+
+RECOMMENDED FOR TONGA MODEL:
+  # Use standard Hirth & Kohlstedt values
+  visc_exponent:               3.5 (nonlinear rheology essential)
+  visc_activation_energy:      5.0e5 J/mol (500 kJ/mol)
+
+  # Strong viscosity contrast
+  Slab min_viscosity:          1e20-1e21 Pa·s (cold)
+  Wedge min_viscosity:         1e18-1e19 Pa·s (wet, 100× weaker)
+
+  # Thermal
+  Initial slab temp:           Cold (120 Ma plate age)
+  Surface temperature:         273 K (0°C)
+  Mantle temperature:          1573 K (1300°C)
+
+================================================================================
+CONVERSION FACTORS
+================================================================================
+
+Energy:
+  1 kJ/mol = 1000 J/mol = 1.0 × 10³ J/mol
+
+Pressure:
+  1 MPa = 10⁶ Pa = 1.0 × 10⁶ Pa
+  1 GPa = 10⁹ Pa = 1.0 × 10⁹ Pa
+
+Volume:
+  1 cm³/mol = 1.0 × 10⁻⁶ m³/mol
+
+================================================================================
+KEY REFERENCES
+================================================================================
+
+1. Hirth, G., & Kohlstedt, D. L. (2003). Rheology of the upper mantle and
+   the mantle wedge: A view from the experimentalists. In Inside the
+   Subduction Factory (pp. 83-105). American Geophysical Union.
+   DOI: 10.1029/138GM06
+
+2. Peng, J., et al. (2024). Modeling Subduction With Extremely Fast Trench
+   Retreat. Journal of Geophysical Research: Solid Earth, 129(6).
+   DOI: 10.1029/2024JB029240
+
+3. Turcotte, D. L., & Schubert, G. (2014). Geodynamics (3rd ed.).
+   Cambridge University Press.
+
+4. Ranalli, G. (1995). Rheology of the Earth (2nd ed.). Chapman & Hall.
+
+5. Byerlee, J. (1978). Friction of rocks. Pure and Applied Geophysics,
+   116(4-5), 615-626.
+
+6. Clauser, C., & Huenges, E. (1995). Thermal conductivity of rocks and
+   minerals. Rock physics & phase relations: A handbook of physical
+   constants, 3, 105-126.
+
+7. Billen, M. I., & Gurnis, M. (2001). A low viscosity wedge in subduction
+   zones. Earth and Planetary Science Letters, 193(1-2), 227-236.
+
+================================================================================
+NOTES
+================================================================================
+
+1. The visc_coefficient parameter in DynEarthSol is code-specific and needs
+   to be calibrated to match the desired reference viscosity.
+
+2. For thermal runaway studies, use:
+   - Realistic activation energies (5.0 × 10⁵ J/mol)
+   - Strong temperature dependence
+   - Cold slab (120 Ma age)
+   - Fast convergence (8-23 cm/yr)
+
+3. Nonlinear rheology (n = 3.5) is ESSENTIAL for realistic subduction:
+   - Allows extreme viscosity variations (10¹⁸ to 10²⁴ Pa·s)
+   - Enables slab bending and corner flow
+   - Produces realistic stress distribution
+
+4. Strain weakening is important for:
+   - Localizing deformation at plate interfaces
+   - Forming realistic shear zones
+   - Allowing plate decoupling
+
+5. When in doubt, use Hirth & Kohlstedt (2003) parameters - they are the
+   standard in the geodynamics community.

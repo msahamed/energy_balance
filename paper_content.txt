@@ -1,0 +1,2117 @@
+arXiv:1812.09849v1 [physics.geo-ph] 24 Dec 2018
+
+Incorporating Deformation Energetics in Long-Term Tectonic
+Modeling
+Sabber Ahameda,∗, Eunseo Choia
+a
+
+Center for Earthquake Research and Information, The University of Memphis, 3890 Central Ave.,
+Memphis, TN 38152, U.S.A.
+
+Abstract
+The deformation-related energy budget is usually considered in the simplest form
+or even completely omitted from the energy balance equation. We derive a full
+energy balance equation that accounts not only for heat energy but also for mechanical (elastic, plastic and viscous) work. The derived equation is implemented
+in DES3D, an unstructured finite element solver for long-term tectonic deformation. We verify the implementation by comparing numerical solutions to the corresponding semi-analytic solutions in three benchmarks extended from the classical
+oedometer test. Two of the benchmarks are designed to evaluate the temperature
+change in a Mohr-Coulomb elasto-plastic square governed by a simplified equation involving plastic power only and by the full temperature evolution equation,
+respectively. The third benchmark differs in that it computes thermal stresses associated with a prescribed uniform temperature increase. All the solutions from
+DES3D show relative errors less than 0.1 %. We also investigate the long-term
+effects of deformation energetics on the evolution of large offset normal faults. We
+find that the models considering the full energy balance equation tend to produce
+more secondary faults and an elongated core complex. Our results for the normal
+∗
+
+Corresponding author
+Email address: msahamed@memphis.edu (Sabber Ahamed)
+
+Preprint submitted to Tectonophysics
+
+December 27, 2018
+
+fault system confirm that persistent inelastic deformation has significant impact on
+the long-term evolution of faults, motivating further exploration of the role of the
+full energy balance equation in other geodynamic systems.
+Keywords: plastic power, strain-softening plasticity, thermodynamic principles,
+thermal stress
+1. Introduction
+The energy conservation principle can describe a wider range of geological
+and geodynamic phenomena when it takes into account energies involved with
+than the usual form involving only heat advection and diffusion because the general form can account for the energetics of deformation, which is often important in complicated phenomena. For instance, Hunt and Wadee (1991) show that
+non-periodic localized folding can be viewed as a superposition of folding modes
+that correspond to multiple local minima of the non-convex energy function and
+the non-convexity originates from deformational contribution to the system’s energy budget. On a similar note, Hobbs et al. (2011) propose that the feedback between shear heating and temperature-dependent viscosity can explain non-periodic
+and non-symmetric folding occurring in layers with small viscosity contrast, The
+classical Biot’s theory (e.g., Biot, 1961) predicts that folding would not occur in
+such a configuration. Influences of energy dissipation have been considered in the
+lithospheric scale as well. Regenauer-Lieb et al. (2006) consider the feedback between the energy dissipated due to inelastic deformation and changes in viscous
+and plastic material properties due to temperature changes resulting from heat converted from the dissipated energy. They find that the two-way feedback process
+can make the brittle-ductile transition (BDT) zone weaker than other parts of lithosphere although the classical strength envelopes predict the BDT zone of lithosphere to be the strongest (Ranalli and Murphy, 1987; Goetze and Evans, 1979;
+2
+
+Brace and Kohlstedt, 1980). Energy dissipated in the form of shear heating is
+shown to promote a necking in the subducting slab and ultimately lead to slab detachment (Gerya et al., 2004). In the whole-mantle scale, Yuen et al. (1987) point
+out that feedback between rheology and dissipative energy in mantle convection
+is potentially an important mechanism that can warm up the mantle by several
+hundred degrees above the incompressible profile. Ita and King (1994) show that
+dissipative heating in the energy balance can significantly facilitate the vertical flow
+across the 660-km phase boundary.
+However, computational long-term tectonic modeling, concerned about the
+long-term evolution of geological structures of various scales, has yet to fully embrace deformation energetics. Problems are centered around the fact that simplifications commonly made in this type of modeling preclude consistent thermomechanical coupling. For instance, energy balance is considered only in terms of
+heat advection and diffusion while thermo-mechanical feedback is realized only
+through temperature-dependent viscosity or shear heating.
+More specifically, we identify three elements in kinematics and constitutive
+models that need to be incorporated into a thermodyanmic framework for longterm tectonic models. Firstly, we note that the elastic or plastic deformations are
+frequently assumed to be incompressible (e.g., Regenauer-Lieb and Yuen, 2003;
+Regenauer-Lieb et al., 2006, 2008; Connolly, 2009; Hobbs et al., 2011) although
+this assumption is neither required nor well-justified. Volumetric strain can have a
+significant effect on energy budget (Hunsche, 1991; Zinoviev and Ermakov, 1994)
+and is non-negligible during brittle deformations (e.g. Brace et al., 1966) and phase
+transformations Hyndman and Peacock (2003); Hetényi et al. (2011). Secondly,
+thermal stresses are often ignored even though they can be a significant source of
+transient stresses and associated deformation (Choi et al., 2008; Choi and Gurnis,
+2008; Korenaga, 2007). A simple back-of-the-envelope calculation shows that a
+3
+
+temperature change of 100 K in a perfectly confined rock body with a bulk modulus
+of 30 GPa can generate up to 90 MPa thermal stresses when the thermal expansion
+coefficient is 3 × 10−5 K −1 . Although transient, thermal stresses of such a magnitude might be sufficient for driving permanent changes in state variables such as
+elastic damage or plastic strain under non-linear rheologies. Thirdly, strain weakening plasticity is sometimes considered as inconsistent with thermodynamic principles (e.g. Regenauer-Lieb et al., 2006). However, frictional materials do show reduction in overall strength with continued loading (e.g. Read and Hegemier, 1984;
+Borja et al., 2000), making it necessary to consider the softening behavior in tectonic models concerned about brittle behaviors of rocks. In fact, the strain softening
+is perfectly legitimate in the light of the Clausius-Duhem inequality, a statement
+of the 2nd law of thermodynamics (e.g., Sec. 3.2 in Lubliner, 2008). Rates and
+amounts of strain softening in rocks are still to be better constrained but reducing
+the uncertainty associated with them is an independent issue.
+In this paper, we first derive a set of governing equations for thermo-mechanically
+coupled tectonic systems. We start from the generic thermodynamic principles
+closely following the procedure of (Wright, 2002) to derive the governing equation
+that incorporate the three elements discussed above. We focus on the elasto-viscoplastic material that has compressible elasticity, thermal stress and strain wakening
+plasticity. Integration of such kinematic and constitutive models into the general
+energy balance will be crucial for realistically modeling geological systems. We
+then implement the derived governing equations in DES3D, an open source finite element code for geodynamic modeling, and verify the implementation semianalytically. Finally, we explore the effects of thermo-mechanical coupling on the
+long-term evolution of large-offset normal faults with emphasis on the role of volumetric inelastic strain. Since extensibly studied and well understood, the normal
+fault systems would allow us to isolate the new effects introduced by the coupled
+4
+
+physics.
+
+2. Derivation of governing equations
+2.1. Energy Balance Equation
+Several theoretical works have derived a set of governing equations for a thermomechanical system from the general form of the thermodynamic principles. The
+common procedure is to relate the rate of change of the internal energy appearing
+in the statement of energy balance to that of thermodynamic potentials such as the
+Helmholtz free energy and the Gibbs free energy. Thermodynamic potentials involve the capacity to do mechanical work in addition to heat content. For instance,
+the Helmholtz free energy is “the portion of the internal energy available for doing work at constant temperature” (p.263 in Malvern, 1969). The main difference
+between the the Helmholtz and the Gibbs free energy is whether strain is an independent variable as in the former or stress is as in the latter. Since the definitions
+of these thermodynamic potentials involve the product of temperature and entropy,
+the energy balance principle takes an intermediate form involving the time derivative of entropy. The last step in deriving the temperature evolution equation is to
+express the time derivative of entropy in terms of that of temperature and other
+variables. ? start from the energy conservation principle stated in terms of the
+Helmholtz free energy to derive the partial differential equation for temperature
+evolution as well as other equations that are coupled with it (e.g., mass conservation equation and constitutive relations) for shear zone-developing systems in the
+Earth and other planets. Their final system of equations can consistently describe
+the feedback processes among energy, rheology and other variables such as grain
+size and water content in shear zone formation. Similarly, Lyakhovsky et al. (1997)
+show how an evolution equation for elastic damage can be derived from the energy
+
+5
+
+conservation principle. Also starting from the energy balance equation in terms
+of the Helmholtz free energy, they include a non-dimensional variable quantifying
+the amount of damage along with temperature and infinitesimal elastic strain as
+independent variables of the free energy. By treating damage process as a source
+of entropy in the intermediate equation for entropy evolution, they derive a damage evolution equation that is proportional to the rate of free energy change with
+damage.
+For completeness, we derive a temperature evolution equation from the generic
+energy balance principle involving the Gibbs free energy (g), following Wright
+(2002). This form of the energy balance principle is different from those of related studies in geodynamics (Regenauer-Lieb and Yuen, 2003; Lyakhovsky et al.,
+1997) in that those earlier studies used another thermodynamic potential, the Helmholtz
+free energy. In the context of continuum thermodynamics, the Gibbs free energy
+is a function of Cauchy stress (σ), temperature (T ) and a set of internal variables
+(q j , j = 0, 1, 2...n) while the Helmholtz energy has elastic strain in place of Cauchy
+stress. The work by Wright (2002) inspired our choice of thermodynamic potential
+but one difference is that we assume infinitesimal strain while Wright (2002) used
+the finite strain kinematics.
+Additive strain rate decomposition is allowed under our assumption of infinitesimal strain. Furthermore, the class of material we are interested in is elastovisco-plastic. Under these assumptions, total strain rate is decomposed as follows:
+
+ǫ̇ = ǫ̇ e + ǫ̇ p + ǫ̇ v ,
+
+(1)
+
+where ǫ̇ e , ǫ̇ p , and ǫ̇ v are elastic, plastic and viscous strain rate, respectively.
+Following Wright (2002), we define the Gibbs free energy per unit mass as
+g(σ, T, q j ) = −e + T η +
+6
+
+1
+σ : ǫe,
+ρ
+
+(2)
+
+where e is the internal energy per unit mass, η is entropy per unit mass, ρ is density
+and ǫ e is elastic strain tensor. Only the elastic strain appears in the definition because it is the only component of strain that can contribute to stored energy. Taking
+the totral differential of g and rearranging terms, we get the differential of internal
+energy:
+de = −dg + η dT + T dη −
+
+1
+1
+1
+σ : ǫ e dρ + ǫ e : dσ + σ : dǫ e .
+2
+ρ
+ρ
+ρ
+
+(3)
+
+Since g = g(σ, T, q j ), the total differential of g is also
+dg =
+
+n
+X
+∂g
+∂g
+∂g
+: dσ +
+dT +
+dq j ,
+∂σ
+∂T
+∂q j
+j=0
+
+(4)
+
+where q0 = ρ according to the conventions of Wright (2002). Elastic strain and
+entropy (c.f., Wright, 2002) are defined as
+ǫe ≡ ρ
+
+∂g
+∂g
+and η ≡
+.
+∂σ
+∂T
+
+(5)
+
+From the equations (3), (4) and (5) we get
+de = −
+
+n
+X
+∂g
+
+∂q j
+j=0
+
+dq j + T dη −
+
+1
+1
+σ : ǫ e dρ + σ : dǫ e
+ρ
+ρ2
+
+(6)
+
+Since q0 = ρ, the terms containing dq0 and dρ can be grouped together. With the
+grouping, equation (6) becomes
+!
+n
+X
+∂g
+1
+1
+∂g
++ 2 σ : ǫ e dρ −
+dq j .
+de = σ : dǫ e + T dη −
+ρ
+∂ρ ρ
+∂q j
+j=1
+With two new notations
+∂g 1
+Q0 ≡ − ρ + σ : ǫ e
+∂ρ ρ
+
+!
+
+(7)
+
+and
+Q j ≡ −ρ
+
+∂g
+∂q j
+
+(j=1, 2, 3, . . .),
+
+7
+
+(8)
+
+equation (6) is simplified to
+de =
+
+n
+1
+1X
+σ : dǫ e + T dη +
+Q j dq j .
+ρ
+ρ j=0
+
+(9)
+
+Differentiating the equation (9) with respect to time (t) we have
+n
+de
+dη 1
+1 X dq j
+=T
++ σ : ǫ̇ e +
+.
+Qj
+dt
+dt ρ
+ρ j=0
+dt
+
+(10)
+
+Multiplying the equation (10) by ρ, we get the following equation for the time rate
+of change of internal energy per volume:
+n
+X
+dq j
+de
+dη
+ρ = ρT
++ σ : ǫ̇ e +
+.
+Qj
+dt
+dt
+dt
+j=0
+
+(11)
+
+To relate the material time derivative of the internal energy given in (11) to
+the energy balance principle, we recall the general form of the energy balance
+equation (e.g., Kennett and Bunge, 2008; Malvern, 1969; Wright, 2002):
+ρ
+
+de
+= σ : ∇v − ∇ · q + ρ s,
+dt
+
+(12)
+
+where s is a heat energy source or sink per mass, q is heat flux and v is velocity.
+According to the additive decomposition of strain rate in (1),
+σ : ǫ̇ e = σ : ǫ̇ − σ : (ǫ̇ p + ǫ̇ v ).
+
+(13)
+
+Since the double dot product of the symmetric σ and the anti-symmetric part of ∇v
+is zero, σ : ∇v = σ : ǫ̇. By eliminating the time derivative of internal energy from
+equations (11) and (12) and then using (13), we get
+n
+X
+dq j
+dη
+ρT
++ σ : ǫ̇ − σ : (ǫ̇ p + ǫ̇ v ) +
+− σ : ǫ̇ − ρ s + ∇ · q = 0,
+Qj
+dt
+dt
+j=0
+
+which is simplified to
+ρT
+
+n
+X
+dq j
+dη
+= σ : (ǫ̇ p + ǫ̇ v ) − ∇ · q + ρ s −
+.
+Qj
+dt
+dt
+j=0
+
+8
+
+(14)
+
+The final step to derive a partial differential equation for temperature from (14)
+is to relate the time derivative of entropy per mass to temperature. The equipresence principle (Malvern, 1969) requires the entropy η to have the same set of
+independent variables as the Gibbs free energy. In other words, the entropy per
+unit mass is also a function of the Cauchy stress (σ), the temperature (T ) and a set
+of internal variables (q j , j = 0, 1, 2...n). The total differential of η = η(σ, T, q j ) is
+n
+X
+∂η
+∂η
+∂η
+dη =
+: dσ +
+dT +
+dq j .
+∂σ
+∂T
+∂q j
+j=0
+
+Identifying the first internal variable (q0 ) with density (ρ) again, we get
+dη =
+
+n
+X
+∂η
+∂η
+∂η
+∂η
+: dσ +
+dT + dρ +
+dq j .
+∂σ
+∂T
+∂ρ
+∂q j
+j=1
+
+(15)
+
+When differentiated with respect to time, the equation (15) becomes
+n
+dη
+∂η dσ ∂η dT ∂η dρ X ∂η dq j
+=
+:
++
++
++
+.
+dt
+∂σ dt
+∂T dt
+∂ρ dt
+∂q
+dt
+j
+j=1
+
+(16)
+
+According to (5),
+∂ ∂g
+∂ ∂g
+1 ∂ǫ e
+∂η
+=
+=
+=
+.
+∂σ ∂σ ∂T
+∂T ∂σ ρ ∂T
+
+(17)
+
+From the definition of the specific heat at constant stress, cσ , we get the following
+identity:
+!
+∂e
+∂
+∂ǫ e
+1
+∂η 1
+cσ ≡
+=
++ σ:
+.
+−g + T η + σ : ǫ e = T
+∂T
+∂T
+ρ
+∂T ρ
+∂T
+
+(18)
+
+Using (18), we get
+!
+1
+∂ǫ e
+1
+∂η
+=
+cσ − σ :
+.
+∂T
+T
+ρ
+∂T
+
+(19)
+
+For convenience, we express partial derivatives of entropy per mass with respect to
+density and other internal variables in terms of Q0 and Q j ( j = 1, 2, 3, . . .), which
+are defined in (7) and (8).
+∂η
+∂ ∂g
+∂ ∂g
+1 ∂Q0
+1
+∂ǫ e
+=
+=
+=−
+− 2σ :
+.
+∂ρ ∂ρ ∂T
+∂T ∂ρ
+ρ ∂T
+∂T
+ρ
+9
+
+(20)
+
+and
+∂η
+∂ ∂g
+∂ ∂g
+1 ∂Q j
+=
+,
+=
+=−
+∂q j ∂q j ∂T
+∂T ∂q j
+ρ ∂T
+
+(21)
+
+for j = 1, 2, 3, . . .. Plugging (17), (19), (20) and (21) and into the equation (16), we
+get
+!
+∂ǫ e dT
+dη 1 ∂ǫ e dσ 1
+1
+=
+:
++
+cσ − σ :
+dt ρ ∂T dt
+T
+ρ
+∂T dt
+!
+n
+1 ∂Q0
+1
+∂ǫ e dρ 1 X ∂Q j dq j
++ −
+− 2σ :
+−
+.
+ρ ∂T
+∂T dt ρ j=1 ∂T dt
+ρ
+This equation can be further simplified to
+!
+!
+dη
+∂ǫ e dρ
+1
+∂ǫ e dT 1 ∂ǫ e dσ
+1
+1
+=
++
+:
+− 2 σ:
+cσ − σ :
+dt
+T
+ρ
+∂T dt
+ρ ∂T dt
+∂T dt
+ρ
+n
+1 X ∂Q j dq j
+.
+−
+ρ j=0 ∂T dt
+
+(22)
+
+Substituting the equation (22) into the equation (14) we get:
+
+
+!
+!
+n
+
+ 1
+X
+∂Q
+dq
+dσ
+∂ǫ
+dT
+∂ǫ
+1
+1
+dρ
+1
+1
+j
+j
+e
+e
+
++
+:
+− σ
+−
+ρT  cσ − σ :
+T
+ρ
+∂T dt
+ρ ∂T
+dt
+ρ dt
+ρ j=0 ∂T dt 
+−σ : (ǫ̇ p + ǫ̇ v ) +
+
+n
+X
+j=0
+
+Qj
+
+dq j
+− ρs + ∇ · q = 0,
+dt
+
+which is simplified to
+!
+!
+∂ǫ e dT
+∂ǫ e dσ 1 dρ
+1
++T
+:
+− σ
+ρ cσ − σ :
+ρ
+∂T dt
+∂T
+dt
+ρ dt
+!
+n
+X
+∂Q j dq j
+− σ : (ǫ̇ p + ǫ̇ v ) − ρs + ∇ · q = 0.
++
+Qj − T
+∂T dt
+j=0
+
+(23)
+
+Strain due to temperature change is assumed to be isotropic: i.e., ∂ǫ e /∂T = αl I,
+where I is the identity tensor and αl is linear thermal expansion coefficient and 1/3
+of the volumetric thermal expansion coefficient, αv . Under this assumption, the
+
+10
+
+equation (23) is rearranged as follows:
+ρcσ
+
+dT
+dT
+− σ : αl I
+= − ∇ · q + ρs + σ : (ǫ̇ p + ǫ̇ v )
+dt
+dt
+!
+dσ 1 dρ
+− T αl I :
+−
+σ
+dt
+ρ dt
+!
+n
+X
+∂Q j dq j
+−
+Qj − T
+.
+∂T dt
+j=0
+
+(24)
+
+Using the identity σ : αl I = −3 αl p = −αv p where p = − 13 σii , we have the
+following final form of the energy balance equation:
+(ρc p + p αv )
+
+dT
+dp
+= − ∇ · q + ρs + σ : (ǫ̇ p + ǫ̇ v ) + T αv
+dt
+dt
+!
+n
+∂Q j dq j
+αv dρ X
+−
+.
+Qj − T
+− pT
+ρ dt
+∂T dt
+j=0
+
+(25)
+
+The last term of (25) corresponds to the changes in energy due to internal variables only. These terms are often parametrized into a coefficient for the inelastic
+power term as in χσ : (ǫ̇ p + ǫ̇ v ) (Regenauer-Lieb and Yuen, 2003; Wright, 2002).
+With this parametrization, the equation (25) is simplied to
+(ρc p + p αv )
+
+dp
+αv dρ
+dT
+= −∇ · q + ρs + χσ : (ǫ̇ p + ǫ̇ v ) + T αv
+− pT
+.
+dt
+dt
+ρ dt
+
+(26)
+
+χ close to 1 means that the energy change due to changes in internal variables is
+negligible relative to inelastic power and most of the inelastic power is converted
+to heat production. To our knowledge, the value of χ is not very well constrained
+for rocks but at least for metals, it is either close to 1 or saturates towards 1 with
+increasing plastic strain (Wright, 2002). Regenauer-Lieb and Yuen (2003) used
+0.85 as the value of χ. χ is assumed to be 1 in this study.
+2.2. Mass balance equation
+The form of the mass conservation equation involving the material derivative
+is
+dρ
+= −ρ∇ · v.
+dt
+11
+
+(27)
+
+In the Lagrangian description of motion that we are going to adopt, the above time
+derivative is understood as the partial derivative with respect to time, not as the
+material time derivative. We substitute (27) into the last term of (26) to get
+(ρc p + p αv )
+
+dT
+dp
+= −∇ · q + ρs + σ : (ǫ̇ p + ǫ̇ v ) + T αv
++ p T αv ∇ · v.
+dt
+dt
+
+(28)
+
+2.3. Thermoelastic constitutive equations
+Assuming the linear isotropic elasticity and temperature change δT , we use the
+following thermoelastic constitutive equations (e.g., Boley and Weiner, 1997):
+σi j = λεkk δi j + 2Gεi j − Kαv δT,
+
+(29)
+
+where λ and G are the Lamé’s constant and K is the bulk modulus defined as
+λ + 2G/3. These thermal elastic constitutive equations become the basis for viscoelastic or elastoplastic constitutive models as described in (Choi et al., 2013b).
+2.4. On the use of non-associated strain-softening plasticity
+Using a non-associated, strain-weakening plasticity for inducing shear bands as
+in (Choi et al., 2013b) has been described as if it violated the 2nd law of thermodynamics (e.g., Regenauer-Lieb and Yuen, 2003; Regenauer-Lieb et al., 2006, 2008).
+An accompanying criticism on the strain-weakening plasticity is that the softening
+rules often used in tectonic modeling lack reliable constraints. While agreeing that
+the lack of experimental and observational constraints on the strain-softening rules
+is problematic, we would like to point out that this problem does not invalidate
+the approach itself. In fact, shear band formation induced by strain softening is
+perfectly legitimate in the light of the 2nd law of thermodynamics. The source of
+previous confusion must be in the erroneous notion that only a strain hardening
+plasticity is “stable” in the sense that the plastic dissipation is positive therefore the
+
+12
+
+2nd law of thermodyanmics is satisfied. However, neither strain softening nor nonassociated flow rule necessarily violates the maximum plastic dissipation postulate
+as shown by Lubliner (2008, see Sec. 3.2.)
+The maximum plastic dissipation postulate requires that the yield surface be
+convex in the principal stress space and the isotropic strain-softening plasticity
+model often used in tectonic modeling! satisfy this requirement by maintaining
+the convexity. For instance, when a strain-softening in the Mohr-Coulomb plastic
+model is realized through reduction in cohesion and friction angle, the hexagonal
+cone-shaped, therefore convex, yield surface in the principal stress space always
+remain convex except in the degenerate case where both friction angle and cohesion
+are zero.
+Under a typical setting for numerical tectonic modeling in which plastic flow
+is incompressible, i.e., dilation angle is 0◦ , and the friction angle is about 30◦ , the
+principal stresses and plastic strain rates are indeed “non-coaxial” (Regenauer-Lieb and Yuen,
+2003; Regenauer-Lieb et al., 2006). However, this fact does not necessarily mean
+that such a non-associated flow rule violates the maximum plastic dissipation. Friction angles usually assumed in tectonic models are never much greater than 30◦ and
+dilation angles are less than that. Since principal stress and plastic strain orientations are normal to a yield surface and a flow potential, respectively, the difference
+between their orientations is equal to that of the friction and the dilation angle.
+Because the double contraction of stress and plastic strain rate in the definition
+of plastic dissipation rate is equivalent to the projection operation, an acute angle
+between the principal stresses and plastic strain rates guarantees a positive plastic dissipation that indicates the satisfaction of the maximum plastic dissipation
+postulate.
+These considerations validate our adoption of the strain-weakening, non-associated,
+Mohr-Coulomb plastic model.
+13
+
+3. Benchmarks
+We verify the governing equations implemented into DES3D, an unstructured
+finite element code for long-term tectonic modeling (Choi et al., 2013b), using
+three benchmark problems. The benchmarks are derived from the standard oedometer test (e.g., Davis and Selvadurai, 2002; Choi et al., 2013b). A cubic block
+of the Mohr-Coulomb plastic material is compressed in one direction while motions in the other directions are restricted (Fig. 1). The symmetry and boundary
+conditions of the problem make it sufficient to discretize a square domain with
+two triangular elements. The simplicity of the problem allows for at least semianalytic solutions. In benchmark-1, we include only the plastic power (σ : ǫ̇ p ) as
+a heat source and ignore the diffusion term. The density is assumed to be constant.
+Benchmark-2 solves the following equation
+(ρc p + p αv )
+
+dp
+dT
+= σ : ǫ̇ p + T αv
++ p T αv ∇ · v,
+dt
+dt
+
+(30)
+
+and the density is updated according to eq. (27). Benchmark-3 verifies the thermal
+stress calculations in DES3D for a uniform temperature that increases linearly in
+time. We intentionally use a low density (1 kg/m3 ) to make the contribution from
+plastic power non-negligible. Parameters used in the benchmarks are listed in Table
+1.
+
+14
+
+vx = 10-5 m/s
+
+L=1m
+L=1m
+
+Free slip
+
+Figure 1: Model geometry and boundary conditions for the plastic oedometer test. This figure and
+associated running/plotting scripts available under Ahamed and Choi (2016)
+
+3.1. Analytic solutions for the oedometer test
+3.1.1. Total strain rate and strain
+The model geometry and boundary conditions give the following components
+of total strain rate (ε̇):
+ε̇ xx =
+
+vx
+,
+L + vx t
+
+(31)
+
+ε̇yy = 0,
+
+(32)
+
+ε̇zz = 0,
+
+(33)
+
+where t is time, vx is the boundary velocity set to be −10−5 m/s and L is the edge
+length of the cube equal to 1 m.
+
+15
+
+Table 1: Model parameters for Benchmarks
+
+Paramter
+
+Symbol
+
+Value
+
+Bulk Modulus
+
+K
+
+200 MPa
+
+Shear Modulus
+
+G
+
+200 MPa
+
+Cohesion
+
+C
+
+1 MPa
+
+Friction Angle
+
+φ
+
+10◦
+
+Dilationa Angle
+
+Ψ
+
+10◦
+
+Initail Temperature
+
+T0
+
+273 K
+
+Reference density
+
+ρ0
+
+1 kg/m3
+
+Volumetric expansion coefficient
+
+α
+
+3.5 K−1
+
+The components of total strain (ε) are given as
+ε xx = ln
+
+L + v t
+x
+
+L
+
+,
+
+(34)
+
+εyy = 0,
+
+(35)
+
+εzz = 0.
+
+(36)
+
+3.1.2. Pre-yielding stress
+Before yielding, stresses are updated according to the linear isotropic elasticity.
+In terms of the Lamé’s constants (λ, G), stress components are given as:
+L + v t
+x
+σ xx = (λ + 2G) ln
+,
+L
+L + v t
+x
+.
+σyy = σzz = λ ln
+L
+
+16
+
+(37)
+(38)
+
+3.1.3. Mohr-Coulomb yield function and flow potential
+We use the following forms of the Mohr-Coulomb yield function ( f ) and flow
+potential (g):
+f (σ xx , σyy ) = σ xx − Nφ σyy + 2C
+g(σ xx , σyy ) = σ xx −
+
+p
+
+Nφ ,
+
+1 + sin ψ
+σyy .
+1 − sin ψ
+
+(39)
+(40)
+
+where Nφ is defined as (1+ sin φ)/(1− sin φ), φ is the firction angle, ψ is the dilation
+angle and C is the cohesion.
+3.1.4. Yielding time (tcr )
+We denote the time when yielding occurs for the first time as tcr . Since f (σ xx , σyy ) =
+0 at t = tcr ,
+(λ + 2G) ln
+
+L + v t 
+x cr
+
+L
+
+− Nφ λ ln
+
+L + v t 
+x cr
+
+L
+
+p
++ 2C Nφ = 0.
+
+Solving the above equation for tcr , we get
+p
+
+
+
+
+
+
+
+2C Nφ
+L 
+ − 1 .
+tcr =
+exp −
+vx
+(λ + 2G) − Nφ λ
+
+(41)
+
+(42)
+
+3.1.5. Plastic strain rate and strain
+
+We get the following expressions for plastic strain for t ≥ tcr :
+ε p xx = 2β(t),
+
+(43)
+
+ε p yy = −Nψ β(t),
+
+(44)
+
+ε p zz = −Nψ β(t),
+
+(45)
+
+where β(t) is the plastic consistency paramter to be determined. As in the classical
+plasticity theory (e.g., Lubliner, 2008), the consistency parameter is zero before
+yielding (t ≤ tcr ).
+17
+
+The plastic strain rates are similarly defined in terms of the rate of consistency
+parameter (β̇(t)):
+ε˙p xx = 2β̇(t),
+
+(46)
+
+ε˙p yy = −Nψ β̇(t),
+
+(47)
+
+ε˙p zz = −Nψ β̇(t).
+
+(48)
+
+3.1.6. Elastic strain after yielding
+The above definitions of total and plastic strain lead to the following expressions for elastic strain as a function of time:
+εexx = ε xx − ε p xx = ln
+
+L + v t
+x
+
+L
+
+− 2 β(t),
+
+(49)
+
+εeyy = εyy − ε p yy = Nψ β(t),
+
+(50)
+
+εezz = Nψ β(t).
+
+(51)
+
+3.1.7. Post-yielding stress and determination of β(t)
+After yielding occurs, stresses are updated as follows:
+σ xx = (λ + 2G) εe xx + λ (εeyy + εezz ),
+
+(52)
+
+σyy = (λ + 2G) εeyy + λ (εezz + εexx ),
+
+(53)
+
+σzz = (λ + 2G) εezz + λ (εe xx + εeyy ).
+
+(54)
+(55)
+
+18
+
+Plugging (49) to (51) into the above equations, we get
+ L + v t
+
+x
+σ xx (t) = (λ + 2G) ln
+− 2β(t) + 2λNψ β(t)
+L
+L + v t h
+i
+x
+− 2(λ + 2G) − 2λNψ β(t),
+= (λ + 2G) ln
+L
+
+
+L + v t
+x
+− 2β(t)
+σyy (t) = (λ + 2G)Nψ β(t) + λ Nψ β(t) + ln
+L
+L + v t h
+i
+x
+= λ ln
++ 2(λ + G)Nψ − 2λ β(t),
+L
+σzz (t) = σyy (t).
+
+(56)
+
+(57)
+(58)
+
+For t ≥ tcr , these stresses should always satisfy the yield condition:
+σ xx − Nφ σyy + 2C
+
+p
+
+Nφ = 0.
+
+(59)
+
+Substituting (56) and (57) for the stress components in the yield condition, we get
+L + v t h
+i
+x
+− 2(λ + 2G) − 2λNψ β(t)
+(λ + 2G) ln
+L
+(60)
+L + v t h
+i
+p
+x
+− 2(λ + G) Nφ Nψ − 2λ Nφ β(t) + 2C Nφ = 0.
+− Nφ λ ln
+L
+Solving the above equation for β(t), we get
+h
+i 
+
+p
+xt
+(λ + 2G) − Nφ λ ln L+v
++ 2C Nφ
+L
+β(t) =
+.
+2(λ + G)Nφ Nψ + 2(λ + 2G) − 2λ(Nφ + Nψ )
+
+(61)
+
+The time derivative of β(t) is given as
+β̇(t) =
+
+(λ + 2G) − Nφ λ
+vx
+.
+2(λ + G)Nφ Nψ + 2(λ + 2G) − 2λ(Nφ + Nψ ) L + vx t
+
+19
+
+(62)
+
+3.1.8. Pressure and pressure rate
+Since p = −(σ xx + σyy + σzz )/3, we get the following from (56), (57) and (58):
+!
+L + v t
+4
+x
++ 2λ + G (1 − Nψ ) β(t)
+p(t) = −K ln
+L
+3
+L + v t
+x
+= −K ln
++ 2 K (1 − Nψ ) β(t),
+L
+!
+(63)
+vx
+4
+ṗ(t) = −K
++ 2λ + G (1 − Nψ ) β̇(t)
+L + vx t
+3
+vx
++ 2K (1 − Nψ ) β̇(t),
+= −K
+L + vx t
+where K is the bulk modulus defined as λ + 2/3G.
+3.1.9. Volume change rate
+
+∇ · v = ε̇ xx + ε̇yy + ε̇zz =
+
+vx
+.
+L + vx t
+
+(64)
+
+3.1.10. Density
+Using the expression for ∇ · v, the mass balance equation becomes
+!
+dρ
+vx
+= −ρ∇ · v = −
+ρ.
+dt
+L + vx t
+
+(65)
+
+Solving for ρ(t), we get
+ρ(t) = ρ0
+
+L
+,
+L + vx t
+
+(66)
+
+where ρ0 is the reference density at t = 0.
+3.2. Benchmark-1 : Plastic power only, no thermal stress
+The equation we are going to solve is
+ρc p
+
+dT
+= σ : ε̇ p ,
+dt
+
+20
+
+(67)
+
+290
+
+8
+
+Analytic
+DES3D
+
+7
+6
+
+Stress (MPa)
+
+Temperature (K)
+
+285
+
+280
+
+275
+
+|σxx| Analytic
+DES3D
+
+|σyy| Analytic
+DES3D
+
+5
+4
+3
+2
+1
+
+270
+
+0.0
+
+0.5
+
+1.0
+
+1.5
+
+Displacement (x10−2 m)
+
+2.0
+
+0
+0.0
+
+0.5
+
+1.0
+
+1.5
+
+Displacement (x10−2 m)
+
+2.0
+
+Figure 2: Temperature (T ), Stress xx (|σxx |), and Stress yy (|σyy |) are plotted against x-displacement
+from analytic and numerical solutions by DES3D for benchmark-1. This figure and associated running/plotting scripts available under Ahamed and Choi (2016)
+
+where
+σ : ε̇ p = σ xx ε˙p xx + σyy ε˙p yy + σzz ε˙p zz
+= 2 β̇(t) σ xx (t) − 2 Nψ β̇(t) σyy (t)
+h
+i
+= 2 β̇(t) σ xx (t) − Nψ σyy (t) .
+
+(68)
+
+Since ρ and c p are assumed to be constant,
+dT
+1
+=
+σ : ε̇ p
+dt
+ρc p
+i
+2β̇(t) h
+=
+σ xx (t) − Nψ σyy (t) .
+ρc p
+
+(69)
+
+We use the forward Euler scheme to integrate the above time derivative of T with
+the initial condition T (0) = 273 K.
+Results of the test are shown in Fig. 2. The relative error of the DES3D solution
+relative to the semi-analytic one is 0.004 %.
+
+21
+
+330
+
+2.0
+
+310
+
+Density (kg/m3 )
+
+Temperature (K)
+
+320
+
+2.5
+
+Analytic
+DES3D
+
+300
+290
+
+1.0
+
+0.5
+
+280
+270
+0.0
+
+1.5
+
+0.5
+
+1.0
+
+1.5
+
+Displacement (x10−2 m)
+
+2.0
+
+0.0
+0.0
+
+0.5
+
+1.0
+
+1.5
+
+Displacement (x10−2 m)
+
+2.0
+
+Figure 3: Temperature (T ) and Density (ρ) are plotted against x-displacement from analytic and
+numerical solutions by DES3D for benchmark-2. This figure and associated running/plotting scripts
+available under Ahamed and Choi (2016)
+
+3.2.1. Benchmark-2 : The full equation, no thermal stress
+The equation to solve is
+
+(ρ c p + p αv )
+
+dp
+dT
+= σ : ε̇ p + T αv
++ p T αv ∇ · v.
+dt
+dt
+
+(70)
+
+Using the derived expressions for the involved quantites and the forward Euler
+scheme, we can integrate the above equation for the initial condition, T (0) = 273.0
+K.
+Results of the test are shown in Fig. 3. The relative errors of the temperature
+and density from DES3D are 0.01 % and 0.00003 %, respectively.
+3.3. Benchmark-3: Thermal stresses under a prescribed temperature change
+We verify the implementation of the thermoelastic constitutive equations in
+DES3D. For simplicity, we prescribe a uniform temperature field, which is initially
+
+22
+
+273 K and increases linearly in time as
+T (t) = b t,
+
+(71)
+
+where b is a constant. We set b to be 0.4 K/s.
+Under this setting, we can analytically derive the elastic and plastic stress solutions for the oedometer test involving thermal stress. In the elastic regime, the
+stresses are given as
+σ xx = (λ + 2G) εe xx + λ (εeyy + εezz ) − Kαv b t,
+
+(72)
+
+σyy = (λ + 2G) εeyy + λ (εezz + εe xx ) − Kαv b t,
+
+(73)
+
+σzz = (λ + 2G) εezz + λ (εe xx + εeyy ) − Kαv b t.
+
+(74)
+
+Using the expressions, (56), (57) and (58), we get
+ L + v t
+
+x
+σ xx (t) = (λ + 2G) ln
+− 2β(t) + 2λNψ β(t) − Kαv b t
+L
+L + v t h
+i
+x
+− 2(λ + 2G) − 2λNψ β(t) − Kαv b t,
+= (λ + 2G) ln
+L
+
+
+L + v t
+x
+− 2β(t) − Kαv b t
+σyy (t) = (λ + 2G)Nψ β(t) + λ Nψ β(t) + ln
+L
+L + v t h
+i
+x
++ 2(λ + G)Nψ − 2λ β(t) − Kαv b t,
+= λ ln
+L
+σzz (t) = σyy (t).
+
+(75)
+(76)
+(77)
+(78)
+(79)
+
+We follow the procedure in Sec. 3.1.4 to compute the timing of the first yielding, tcr ,
+but use the Newton method because the equation for tcr does not allow a solution in
+terms of elementary functions. Following the procedure for determining β(t) and
+β̇(t) described in Sec. 3.1.7, we get
+h
+i 
+
+p
+xt
+(λ + 2G) − Nφ λ ln L+v
++ (Nφ − 1) Kαv b t + 2C Nφ
+L
+β(t) =
+,
+2(λ + G)Nφ Nψ + 2(λ + 2G) − 2λ(Nφ + Nψ )
+
+(80)
+
+and
+β̇(t) =
+
+h
+
+i v
+x
+(λ + 2G) − Nφ λ L+v
++ (Nφ − 1) Kαv b
+xt
+
+2(λ + G)Nφ Nψ + 2(λ + 2G) − 2λ(Nφ + Nψ )
+23
+
+.
+
+(81)
+
+As before, β(t) = β̇(t) = 0 for t < tcr .
+Differential stress arising in this benchmark is the same with those of the
+isothermal case but pressure in this test is greater due to the compressional thermal stress caused by the prescribed temperature increase. As a result, the first
+yielding in benchmark-3 should occur at a greater value of differential stress, or
+equivalently, displacement than in the isothermal case. In other words, than in the
+isothermal case. The results of benchmark-3 shows in Fig. 4 are consistent with
+this expectation. The relative errors of σ xx and σyy computed with DES3D are
+0.0028 % and 0.01 %.
+
+4. Discussion
+Using the verified implementation of the “full” energy balance equation, (28),
+as well as the thermo-elasticity, we now systematically assess the impact of the
+thermo-mechanically coupled governing equations on a more geologically relevant problem. In this study, we choose the large-offset normal fault evolution (e.g.
+Lavier et al., 2000) as an example. Studied extensively and understood well, this
+system will facilitate identification and attribution of differences between the models of the newly-introduced physics and the uncoupled, isothermal ones.
+We create a normal fault in an extending Mohr-Coulomb elasto-plastic layer
+which is initially 100 km long and 10 km thick (Fig. 5). Both sides of the layer
+are pulled at a constant velocity of 0.5 cm/yr. The bottom boundary is supported
+by the Winkler foundation (Watts, 2001, pp.95). To induce strain localization, we
+decrease cohesion from 40 MPa to 8 MPa linearly as plastic strain increases to 1.
+We add a weak zone at the bottom center of the domain to initiate a fault from
+there. We impose topographic smoothing of the diffusion type with a transport
+coefficient of 10−7 m2 /s (Turcotte and Schubert, 2014, pp. 225).
+
+24
+
+14
+12
+
+Stress (MPa)
+
+10
+8
+
+|σxx| Analytic
+
+DES3D
+Isothermal
+|σyy| Analytic
+DES3D
+Isothermal
+
+6
+4
+2
+0
+0.0
+
+0.5
+
+1.0
+
+1.5
+
+Displacement (x10−2 m)
+
+2.0
+
+Figure 4: |σxx | and |σyy | from the analytic (circles) and the DES3D numerical solution (solid lines) for
+benchmark-3, plotted against displacement. The corresponding analytic solutions for the isothermal
+case (dashed lines) are shown for comparison. This figure and associated running/plotting scripts
+available under Ahamed and Choi (2016)
+
+25
+
+0.5 cm/year
+
+Density = 2700 Kg/m3
+Weak inhomogeneity
+
+10 km
+
+0.5 cm/year
+
+100 km
+
+Winkler Foundation
+
+Figure 5: Setup of the large offset normal fault models. This figure and associated running/plotting
+scripts available under Ahamed and Choi (2016)
+
+We set up five models that differ in the form of the energy balance equation
+and in the presence of volumetric plastic strain. In model-1, we do not consider
+any heat-generating mechanism. As a result, the initial temperature, which is uniformly 0◦ C, does not change in time. The behavior of model-1 should be similar to
+that of the “unlimited, footwall-snapping” mode of (Lavier et al., 2000). In the rest
+of models (model-2 to 5) we solve the full energy balance equation (28) with the
+heat source/sink term, s, equal to zero and with the temperature feedback to rheology through thermo-elasticity. To explore the effects of volumetric plastic strain,
+we use a non-zero dilation angle in model-3 to 5. The dilation angle is fixed in
+model-3 while we reduce it to zero as the accumulated plastic strain increases to a
+prescribed value of 1.0 in model-4 and 5. The model-5 is the same as model-4 but
+we intentionally include only the deviatoric part of the plastic power (σ : ε̇ p ) in
+equation (28). By comparing model-4 and 5, we can decide whether the volumetric plastic power can be ignored. Table 2 summarizes the differences among the
+models. Table 3 shows the list of the parameters used in the models.
+We see noticeable differences in fault geometry and shape of the core complex
+between model-1 and model-2 that solves the full energy balance equation and
+includes thermal stresses. The overall behavior of the faults in model-1 is similar
+to the unlimited, footwall snapping mode of Lavier et al. (2000). The geometry
+26
+
+Table 2: Description of the normal fault evolution models
+
+Models
+
+Energy balance
+
+Dilation angle
+
+Plastic power
+
+Model-1
+
+Heat diffusion only
+
+0◦
+
+N/A
+
+Model-2
+
+Full
+
+0◦
+
+Total
+
+Model-3
+
+Full
+
+10◦
+
+Total
+
+Model-4
+
+Full
+
+10◦ to 0◦
+
+Total
+
+Model-5
+
+Full
+
+10◦ to 0◦
+
+Deviatoric
+
+Table 3: Parameters for the normal fault evolution models
+
+Parameter
+
+Symbol
+
+Value
+
+Bulk Modulus
+
+K
+
+50 GPa
+
+Lamé’s constant
+
+λ
+
+30 GPa
+
+Shear Modulus
+
+G
+
+30 GPa
+
+Initial Cohesion
+
+C
+
+40 MPa
+
+Friction Angle
+
+φ
+
+30◦
+
+Dilation Angle
+
+Ψ
+
+10◦
+
+Density
+
+ρ
+
+2700 Kg/m3
+
+Volumetric expansion coefficient
+
+α
+
+3.5 K −1
+
+of the primary fault of model-2 is almost the same as that of the model-1 until
+about 17 km of extension. Around this time, however, model-2 forms a secondary
+fault but model-1 does not yet. After 20 km of extension, more secondary faults
+start form in both models but their geometry and location are not identical. For
+instance, a fault block forms in model-2 after about 30 km of extension when a
+new high-angle fault forms next to the first secondary fault. Model-1 does not
+develop a corresponding structure including a fault block after the same amount
+of extension. Model-1 forms a single secondary fault initially, which eventually
+27
+
+connects with the second secondary fault after about 40 km of extension. At 30 km
+of extension model-2 has three well-developed secondary faults while model-1 has
+two. Initially, the shape of core complex remains same until 10 km of extension.
+Because of different fault geometry the shape of the core complex started to differ
+from each other from 20 km of extension. At 40 km of extension the core-complex
+of the model-2 becomes elongated with the almost flat surface while the model-1
+has more rounded one.
+Figure 7 shows the distribution of temperature in model-2 and the corresponding thermal stresses after 10 and 30 km of extension. The temperature increase
+near the active faults are greater than 15 ◦ C and the magnitude of thermal stress
+is as large as 40 MPa. The thermal stress magnitude is a non-negligible fraction,
+about 10 %, of lithostatic stress near the bottom. Thus, the different behaviors of
+the models can be attributed to the presence of thermal stresses only in model-2.
+Plastic strain
+
+a Model-1
+
+b Model-2
+
+10 Km
+
+0
+
+Primary fault
+
+10
+
+Primary fault
+
+20 Km
+
+30 Km
+
+40 Km
+
+Secondary fault
+
+Fault block
+
+Secondary fault
+
+Fault block
+
+Figure 6: Plastic strain distribution of (a) model-1 and (b) model-2 after 10, 20, 30 and 40 km of
+extensions. This figure and associated running/plotting scripts available under Ahamed and Choi
+(2016)
+
+Identical with model-2 except a non-zero dilation angle of 10◦ , model-3 develops an unrealistically elevated core-complex with a relief greater than 10 km and
+shear bands that are much wider than those in model-1 and 2. Expansion of shear
+
+28
+
+a
+
+Temperature (oC)
+
+10 km of extension
+
+0
+
+30 km of extension
+
+b
+10 km of extension
+
+25
+
+Thermal Stress (MPa)
+-40
+5
+
+30 km of extension
+
+Figure 7: (a) Thermal stress and (b) temperature distribution of model-2 after 10 and 30 km of
+extension. This figure and associated running/plotting scripts available under Ahamed and Choi
+(2016)
+
+bands when dilation angle is non-zero is kinematically expected. The dilation angle fixed at 10◦ sustains a higher level of plastic power than the non-dilational cases
+zero dilation angle. The greater plastic power leads to a greater amount of temperature change and thermal stresses. The thermal stresses pushes up the free-traction
+top surface, creating the highly elevated core-complex.
+Plastic strain
+
+Model-3
+
+0
+
+10
+
+10 Km
+
+20 Km
+
+30 Km
+
+40 Km
+
+Figure 8: Same with Fig. 6 but for model-3. This figure and associated running/plotting scripts
+available under Ahamed and Choi (2016)
+
+29
+
+Plastic strain
+
+a Model-4
+
+b Model-5
+
+0
+
+10
+
+10 Km
+
+20 Km
+
+Rider block
+
+30 Km
+
+40 Km
+
+Rider block
+
+Rider block
+
+Secondary fault
+
+Secondary fault
+
+5 km
+
+Figure 9: Same with Fig. 6 but for (a) model-4 and (b) model-5. This figure and associated running/plotting scripts available under Ahamed and Choi (2016)
+
+To isolate the effect of volumetric plastic power, we construct the model-4 and
+5 that are identical except that model-4 considers the total plastic power while
+model-5 includes only the deviatoric part of the plastic power. In order to prevent
+the unrealistic expansion of shear bands as in model-3, the dilation angle is reduced
+with accumulated plastic strain in both model-4 and 5 (Choi and Petersen, 2015).
+Models-4 and 5 do not show notable differences until 10 km extension (Figure
+9). However, after about 20 km of extension, they start to exhibit differences in the
+fault geometry as well as in the timing of rider block formation. A rider block starts
+to form at 17 km of extension in model-4 but model-5 forms one only after more
+than 37 km of extension. After 40 km of extension, model-5 has three secondary
+faults produced by the footwall snapping but model-4 still has only two secondary
+fault. The topographic relief in model-4 and 5 is about 5 km, which is much greater
+than the relief of the previous models for the large offset normal fault (Lavier et al.,
+2000; Choi et al., 2013a) but about half of that of model-3 with a fixed dilation
+angle of 10◦ . The excessive reliefs in the models with non-zero dilation angle,
+model-3 to 5, suggest that the rate of dilation angle reduction should be greater
+than that of this study to have 1-2 km topographic relief as in the previous studies
+30
+
+on large-offset normal faults. The noticeable differences between model-4 and 5
+suggest to include the total plastic power in the energy balance rather than only
+the deviatoric component. Ignoring the volumetric plastic power as in model-5 is
+inconsistent with the kinematics in the first place.
+
+5. Conclusions
+We derive a temperature evolution equation based on the energy balance principle that accounts for deformation-related energy changes as well as the conventional heat energy diffusion and advection. An explicit-time finite element solution procedure for the derived equation is implemented in DES3D, an unstructured
+mesh finite element solver for geodynamics. We verify the implementation using
+three benchmark tests that have semi-analytic solutions. Benchmark-1 includes
+only the total plastic power term in the energy balance equation. Benchmark-2 includes the full energy equation as well as the mass balance equation. Benchmark-3
+prescribes a temperature change linear in time and computes thermal stresses. The
+numerical solutions from DES3D for all the benchmarks show an excellent match
+with the corresponding semi-analytic solutions. Coupling the verified implementation of the full temperature evolution with the strain weakening Mohr-Coulomb
+plastic rheology through thermal stresses, we also explore the long-term behaviors
+of a large-offset normal fault. We find that the temperature arising mostly from
+the inelastic power term in the full energy balance has non-negligible effects on
+the long-term evolution of normal fault. For instance, when the plastic power is
+considered, temperature increases by more than 15◦ C and the magnitude of the
+associated thermal stress is as large as 40 MPa. These extra stresses appear to
+promote the formation of secondary faults and an elongated core complex. When
+the dilational plastic deformation is enabled, our models develop even more dif-
+
+31
+
+ferences in faulting behaviors such as the formation of a rider block and the great
+topographic relief, compared to the previous models for the large-offset normal
+fault with the same parameters and geometry. We conclude that the new coupled
+governing equations presented in this study has significant impact on long-term
+tectonics. Although not so strong as to cause a fundamental shift in faulting modes
+under tested conditions, the effects of deformation energetics might be critically
+important in other geologically relevant systems and conditions.
+References
+References
+Ahamed,
+tion
+
+S.,
+
+Choi,
+
+energetics
+
+E.,
+in
+
+2016.
+
+The
+
+Long-term
+
+tectonics
+
+effects
+
+of
+
+deforma-
+
+modeling
+
+URL:
+
+https://figshare.com/articles/Figures/4213599,
+doi:10.6084/m9.figshare.4213599.v5.
+Biot,
+
+M.A.,
+
+media
+
+and
+
+letin
+
+of
+
+1961.
+
+Theory
+
+of
+
+folding
+
+of
+
+stratified
+
+tectonics
+
+and
+
+orogenesis.
+
+its
+
+implications
+
+in
+
+the
+
+Geological
+
+Society
+
+of
+
+America
+
+72,
+
+viscoelastic
+Bul-
+
+1595–1620.
+
+doi:10.1130/0016-7606(1961)72[1595:TOFOSV]2.0.CO;2.
+Boley, B.A., Weiner, J.H., 1997. Theory of thermal stresses. Dover Publications,
+Inc., Mineola, New York.
+Borja, B.R.I., Regueiro, R.A., Lai, T.Y., 2000. Fe Modeling of Strain Localization
+in Soft Rock. Journal of Geotechnical and Geoenvironmental Engineering 126,
+335–343. doi:10.1061/(ASCE)1090-0241(2000)126:4(335).
+Brace, W., Kohlstedt, D., 1980. Limits on lithospheric stress imposed by laboratory
+experiments. Journal of Geophysical Research: Solid Earth 85, 6248–6252.
+32
+
+Brace, W., Paulding, B., Scholz, C., 1966. Dilatancy in the fracture of crystalline
+rocks. Journal of Geophysical Research 71, 3939–3953.
+Choi, E., Buck, W.R., Lavier, L.L., Petersen, K.D., 2013a.
+complex geometry to constrain fault strength.
+
+Using core
+
+Geophysical Research Let-
+
+ters 40, 3863–3867. URL: http://doi.wiley.com/10.1002/grl.50732,
+doi:10.1002/grl.50732.
+Choi, E., Gurnis, M., 2008. Thermally induced brittle deformation in oceanic
+lithosphere and the spacing of fracture zones. Earth Planet. Sci. Lett. 269, 259–
+270. doi:10.1016/j.epsl.2008.02.025.
+Choi, E., Petersen, K.D., 2015. Making coulomb angle-oriented shear bands in
+numerical tectonic models. Tectonophysics 657, 94–101.
+Choi, E., Tan, E., Lavier, L., Calo, V., 2013b. Dynearthsol2d: An efficient unstructured finite element method to study long-term tectonic deformation. Journal of
+Geophysical Research: Solid Earth 118, 2429–2444.
+Choi, E.s., Lavier, L., Gurnis, M., 2008. Thermomechanics of mid-ocean ridge
+segmentation. Physics of the Earth and Planetary Interiors 171, 374–386.
+Connolly, J., 2009. The geodynamic equation of state: what and how. Geochemistry, Geophysics, Geosystems 10.
+Davis, R.O., Selvadurai, A.P.S., 2002. Plasticity and Geomechanics. Cambridge
+University Press, Cambridge, UK, Cambridge, UK.
+Gerya, T.V., Yuen, D.A., Maresch, W.V., 2004. Thermomechanical modelling of
+slab detachment. Earth and Planetary Science Letters 226, 101–116.
+
+33
+
+Goetze, C., Evans, B., 1979. Stress and temperature in the bending lithosphere as
+constrained by experimental rock mechanics. Geophysical Journal International
+59, 463–478.
+Hetényi, G., Godard, V., Cattin, R., Connolly, J.A., 2011. Incorporating metamorphism in geodynamic models: the mass conservation problem. Geophysical
+Journal International 186, 6–10.
+Hobbs, B.E., Ord, A., Regenauer-Lieb, K., 2011. The thermodynamics of deformed metamorphic rocks: a review. Journal of Structural Geology 33, 758–
+818.
+Hunsche, U., 1991. Volume change and energy dissipation in rock salt during
+triaxial failure tests, in: Mechanics of Creep Brittle Materials 2. Springer, pp.
+172–182.
+Hunt, G.W., Wadee, M.K., 1991.
+for Localized Buckling.
+
+Comparative Lagrangian Formulations
+
+Proceedings of the Royal Society A: Math-
+
+ematical, Physical and Engineering Sciences 434, 485–502.
+
+URL:
+
+http://rspa.royalsocietypublishing.org/cgi/doi/10.1098/rspa.1991.0109,
+doi:10.1098/rspa.1991.0109.
+Hyndman, R.D., Peacock, S.M., 2003. Serpentinization of the forearc mantle.
+Earth and Planetary Science Letters 212, 417–432.
+Ita, J., King, S.D., 1994. Sensitivity of convection with an endothermic phase
+change to the form of governing equations, initial conditions, boundary conditions, and equation of state. Journal of Geophysical Research: Solid Earth 99,
+15919–15938.
+
+34
+
+Kennett, B., Bunge, H., 2008. Geophysical continua. Cambridge University, Kap
+, 10–11.
+Korenaga, J., 2007. Thermal cracking and the deep hydration of oceanic lithosphere: A key to the generation of plate tectonics?
+
+Journal of Geophysical
+
+Research: Solid Earth 112, 1–20. doi:10.1029/2006JB004502.
+Lavier, L.L., Buck, W.R., Poliakov, A.N., 2000. Factors controlling normal fault
+offset in an ideal brittle layer. Journal of Geophysical Research: Solid Earth
+(1978–2012) 105, 23431–23442.
+Lubliner, J., 2008. Plasticity Theory. Dover Publications, Inc., Mineola, New York.
+Lyakhovsky, V., Ben-Zion, Y., Agnon, A., 1997. Distributed damage, faulting, and
+friction. Journal of Geophysical Research: Solid Earth 102, 27635–27649.
+Malvern, L.E., 1969. Introduction to the Mechanics of a Continuous Medium.
+Prentice-Hall, Inc., Upper Saddle River, New Jersey.
+Ranalli, G., Murphy, D.C., 1987. Rheological stratification of the lithosphere.
+Tectonophysics 132, 281–295.
+Read, H., Hegemier, G., 1984.
+crete
+
+a review article.
+
+Strain softening of rock, soil and con-
+
+Mechanics of Materials 3, 271–294.
+
+URL:
+
+http://linkinghub.elsevier.com/retrieve/pii/0167663684900280,
+doi:10.1016/0167-6636(84)90028-0.
+Regenauer-Lieb, K., Rosenbaum, G., Weinberg, R.F., 2008. Strain localisation and
+weakening of the lithosphere during extension. Tectonophysics 458, 96–104.
+Regenauer-Lieb, K., Weinberg, R.F., Rosenbaum, G., 2006. The effect of energy
+feedbacks on continental strength. Nature 442, 67–70.
+35
+
+Regenauer-Lieb, K., Yuen, D., 2003.
+logical and planetary sciences:
+approaches.
+
+Earth-Science
+
+Modeling shear zones in geo-
+
+solid- and fluid-thermal–mechanical
+Reviews
+
+63,
+
+295–349.
+
+URL:
+
+http://dx.doi.org/10.1016/S0012-8252(03)00038-2,
+doi:10.1016/s0012-8252(03)00038-2.
+Turcotte, D.L., Schubert, G., 2014. Geodynamics. Cambridge University Press.
+Watts, A.B., 2001. Isostasy and Flexure of the Lithosphere. Cambridge University
+Press.
+Wright, T.W., 2002. The physics and mathematics of adiabatic shear bands. Cambridge University Press.
+Yuen, D.A., Quareni, F., Hong, H.J., 1987. Effects from equation of state and rheology in dissipative heating in compressible mantle convection. Nature 326,
+67–69. URL: http://www.nature.com/doifinder/10.1038/326067a0,
+doi:10.1038/326067a0.
+Zinoviev, P.A., Ermakov, Y.N., 1994. Energy dissipation in composite materials.
+CRC Press.
+
+36
+
+

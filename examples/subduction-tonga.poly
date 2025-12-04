@@ -1,0 +1,67 @@
+# Subduction zone geometry - Tonga style (Simplified for stability)
+# Domain: 600 km x 300 km
+# Trench at x=200 km, Slab dip: 45 degrees
+# Material regions:
+#   0: Subducting oceanic lithosphere (cold slab)
+#   1: Mantle wedge and deep mantle (hot)
+#
+#### node coordinates ####
+# npoints ndims 0 0
+  12      2     0 0
+# i    xi       yi
+# Domain corners
+  0    0.0      0.0        # Top left corner
+  1    0.0   -300.0e3      # Bottom left corner
+  2  600.0e3 -300.0e3      # Bottom right corner
+  3  600.0e3    0.0        # Top right corner
+
+# Trench and slab geometry (45-degree dip)
+  4  200.0e3    0.0        # Trench location
+  5  250.0e3  -50.0e3      # Slab point 1
+  6  300.0e3 -100.0e3      # Slab point 2
+  7  350.0e3 -150.0e3      # Slab point 3
+  8  400.0e3 -200.0e3      # Slab point 4
+  9  450.0e3 -250.0e3      # Slab point 5
+ 10  500.0e3 -300.0e3      # Slab bottom
+
+# Oceanic lithosphere base (100 km thick)
+ 11  200.0e3 -100.0e3      # Base at trench
+
+#### segments ####
+# nsegments 1
+  17        1
+# j  pj0  pj1  bdry_flag
+# External boundaries
+  0   0    4   32  # Top surface: left of trench (z1)
+  1   4    3   32  # Top surface: right of trench (z1)
+  2   3    2    2  # Right boundary (x1)
+  3   2   10   16  # Bottom boundary: right (z0)
+  4  10    1   16  # Bottom boundary: left (z0)
+  5   1    0    1  # Left boundary (x0)
+
+# Slab interface (critical for material tracking)
+  6   4    5    0  # Slab segment 1
+  7   5    6    0  # Slab segment 2
+  8   6    7    0  # Slab segment 3
+  9   7    8    0  # Slab segment 4
+ 10   8    9    0  # Slab segment 5
+ 11   9   10    0  # Slab segment 6 (to bottom)
+
+# Oceanic lithosphere base
+ 12   0   11    0  # Left boundary to lith base
+ 13  11    4    0  # Lith base to trench
+
+# Connection segments to close regions
+ 14  11    6    0  # Connect lith base to slab
+ 15   7   10    0  # Connect slab to bottom
+ 16   1   11    0  # Connect bottom-left to lith base
+
+#### holes, must be 0 ####
+0
+
+#### regions ####
+# nregions
+  2
+# k  xk       zk        mattype  max_area
+  0  100e3   -50e3     0        2e7    # Incoming oceanic lithosphere + slab (cold)
+  1  400e3   -50e3     1        5e7    # Mantle wedge and deep mantle (hot)

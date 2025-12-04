@@ -27,7 +27,7 @@ NC='\033[0m' # No Color
 
 # Script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ANALYTICS_DIR="${SCRIPT_DIR}/analytics"
+ANALYTICS_DIR="${SCRIPT_DIR}"
 
 # Check if analytics directory exists
 if [ ! -d "$ANALYTICS_DIR" ]; then
@@ -78,10 +78,10 @@ echo ""
 # ============================================================================
 # 1. Basic Analysis and Comparison
 # ============================================================================
-echo -e "${GREEN}[1/3] Running basic field analysis...${NC}"
+echo -e "${GREEN}[1/4] Running basic field analysis...${NC}"
 echo "----------------------------------------------------------------------"
 
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR/.."
 python3 "${ANALYTICS_DIR}/analyze_results.py" "${EXPERIMENTS[@]}" || {
     echo -e "${RED}Error running analyze_results.py${NC}"
     exit 1
@@ -94,7 +94,7 @@ echo ""
 # ============================================================================
 # 2. Energy Interpretation (for experiments with energy balance)
 # ============================================================================
-echo -e "${GREEN}[2/3] Running energy balance interpretation...${NC}"
+echo -e "${GREEN}[2/4] Running energy balance interpretation...${NC}"
 echo "----------------------------------------------------------------------"
 
 for exp in "${EXPERIMENTS[@]}"; do
@@ -127,7 +127,7 @@ echo ""
 # ============================================================================
 # 3. Feedback Analysis
 # ============================================================================
-echo -e "${GREEN}[3/3] Running thermal-mechanical feedback analysis...${NC}"
+echo -e "${GREEN}[3/4] Running thermal-mechanical feedback analysis...${NC}"
 echo "----------------------------------------------------------------------"
 
 if [ $NUM_EXPERIMENTS -eq 1 ]; then
@@ -158,6 +158,40 @@ echo -e "${GREEN}✓ Feedback analysis complete${NC}"
 echo ""
 
 # ============================================================================
+# 4. Structural/Fault Analysis (NEW)
+# ============================================================================
+echo -e "${GREEN}[4/4] Running structural and fault analysis...${NC}"
+echo "----------------------------------------------------------------------"
+
+for exp in "${EXPERIMENTS[@]}"; do
+    latest_dir=$(ls -dt output/${exp}_* 2>/dev/null | head -n 1)
+
+    if [ -n "$latest_dir" ]; then
+        vtk_dir="${latest_dir}/vtk"
+        viz_dir="${latest_dir}/viz"
+
+        if [ -d "$vtk_dir" ]; then
+            echo "Generating fault development analysis for: $exp"
+            python3 "${ANALYTICS_DIR}/plot_fault_development.py" "$vtk_dir" "$viz_dir" || {
+                echo -e "${YELLOW}Warning: Fault analysis failed for $exp${NC}"
+            }
+
+            echo "Generating field statistics overview for: $exp"
+            python3 "${ANALYTICS_DIR}/plot_field_statistics.py" "$vtk_dir" "$viz_dir" || {
+                echo -e "${YELLOW}Warning: Field statistics failed for $exp${NC}"
+            }
+            echo ""
+        else
+            echo -e "${YELLOW}Warning: No VTK directory found for $exp${NC}"
+            echo ""
+        fi
+    fi
+done
+
+echo -e "${GREEN}✓ Structural analysis complete${NC}"
+echo ""
+
+# ============================================================================
 # Summary
 # ============================================================================
 echo "========================================================================"
@@ -183,6 +217,8 @@ echo "  • velocity_evolution.png          - Velocity over time"
 echo "  • energy_terms.png                - Energy balance components"
 echo "  • energy_geological_interpretation.png - Energy analysis"
 echo "  • feedback_analysis.png           - Thermal-mechanical feedback"
+echo "  • field_statistics.png            - Current field overview (NEW)"
+echo "  • fault_development.png           - Structural/fault analysis (NEW)"
 if [ $NUM_EXPERIMENTS -gt 1 ]; then
     echo "  • comparison_*.png                - Multi-experiment comparisons"
 fi
