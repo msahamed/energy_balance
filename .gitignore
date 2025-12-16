@@ -29,3 +29,6 @@ test
 external
 output
 .DS_Store
+README_md/
+mmg/
+examples/bengal_basin/
