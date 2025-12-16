@@ -1,0 +1,199 @@
+# Madhupur Fault 2D Cross-Section - Bengal Basin - 5 Layer Model
+# Domain: 200 km wide × 100 km deep
+# Fault: 40° north-dipping thrust (similar to 2025 Narsingdi M5.4 earthquake)
+# Five crustal layers:
+#   Layer 0: Alluvium (0-0.5 km)
+#   Layer 1: Tertiary sediments (0.5-3 km)
+#   Layer 2: Upper crust (3-15 km)
+#   Layer 3: Middle crust (15-25 km)
+#   Layer 4: Lower crust (25-100 km)
+# Materials 0-4: Hanging wall (west side)
+# Materials 5-9: Footwall (east side)
+
+#### node coordinates ####
+# npoints ndims 0 0
+  32      2     0 0
+# i    xi       zi
+
+# Left boundary (hanging wall side) - from surface to bottom
+  0    0.0        0.0        # Top left (surface)
+  1    0.0       -0.5e3      # Layer boundary 1
+  2    0.0       -3.0e3      # Layer boundary 2
+  3    0.0      -15.0e3      # Layer boundary 3
+  4    0.0      -25.0e3      # Layer boundary 4
+  5    0.0     -100.0e3      # Bottom left
+
+# Fault trace - single straight line at 40° dip
+  6   80.0e3     -5.0e3      # Fault top (5 km depth)
+  7  140.0e3    -40.0e3      # Fault bottom (40 km depth)
+
+# Right boundary (footwall side) - from surface to bottom
+  8  200.0e3      0.0        # Top right (surface)
+  9  200.0e3     -0.5e3      # Layer boundary 1
+ 10  200.0e3     -3.0e3      # Layer boundary 2
+ 11  200.0e3    -15.0e3      # Layer boundary 3
+ 12  200.0e3    -25.0e3      # Layer boundary 4
+ 13  200.0e3   -100.0e3      # Bottom right
+
+# Horizontal layer boundaries on hanging wall side (left of fault)
+ 14   80.0e3     -0.5e3      # Layer 1 at fault
+ 15   80.0e3     -3.0e3      # Layer 2 at fault
+ 16   80.0e3    -15.0e3      # Layer 3 at fault
+ 17   80.0e3    -25.0e3      # Layer 4 at fault
+ 18   80.0e3   -100.0e3      # Bottom at fault
+
+# Horizontal layer boundaries on footwall side (right of fault)
+ 19  140.0e3     -0.5e3      # Layer 1 at fault
+ 20  140.0e3     -3.0e3      # Layer 2 at fault
+ 21  140.0e3    -15.0e3      # Layer 3 at fault
+ 22  140.0e3    -25.0e3      # Layer 4 at fault
+ 23  140.0e3   -100.0e3      # Bottom at fault
+
+# Top surface points
+ 24   80.0e3      0.0        # Surface at fault top projection
+ 25  140.0e3      0.0        # Surface at fault bottom projection
+
+# Additional corner points for bottom
+ 26   80.0e3   -100.0e3      # Bottom corner at fault top x
+ 27  140.0e3   -100.0e3      # Bottom corner at fault bottom x
+
+# Points to help with layer intersections
+ 28   80.0e3     -5.0e3      # Fault top (duplicate of 6)
+ 29  140.0e3    -40.0e3      # Fault bottom (duplicate of 7)
+# Additional nodes for fault intersections
+ 30   97143.0   -15000.0    # Fault intersection with layer 3 boundary
+ 31  114286.0   -25000.0    # Fault intersection with layer 4 boundary
+
+#### segments ####
+# nsegments 1
+  70        1
+# j  pj0  pj1  bdry_flag
+
+# External boundaries
+  0   0   24   32  # Top surface: left of fault
+  1  24   25   32  # Top surface: at fault
+  2  25    8   32  # Top surface: right of fault
+  3   8    9    2  # Right boundary segment 1
+  4   9   10    2  # Right boundary segment 2
+  5  10   11    2  # Right boundary segment 3
+  6  11   12    2  # Right boundary segment 4
+  7  12   13    2  # Right boundary segment 5
+  8   5   18   16  # Bottom boundary segment 1 (0 to 80km)
+  9  18   23   16  # Bottom boundary segment 2 (80 to 140km)
+ 10  23   13   16  # Bottom boundary segment 3 (140 to 200km)
+ 11   5    4    1  # Left boundary segment 5
+ 12   4    3    1  # Left boundary segment 4
+ 13   3    2    1  # Left boundary segment 3
+ 14   2    1    1  # Left boundary segment 2
+ 15   1    0    1  # Left boundary segment 1
+
+# Fault (Split into 3 segments)
+ 16   6   30    0  # Fault Top -> Intersection 1
+ 17  30   31    0  # Intersection 1 -> Intersection 2
+ 18  31    7    0  # Intersection 2 -> Fault Bottom
+
+# Hanging wall horizontal layer boundaries (left side)
+ 19   1   14    0  # Layer 1 boundary (0.5 km)
+ 20   2   15    0  # Layer 2 boundary (3 km)
+ 21   3   16    0  # Layer 3 boundary (15 km)
+ 22   4   17    0  # Layer 4 boundary (25 km)
+ 23   5   18    0  # Bottom connection
+
+# Footwall horizontal layer boundaries (right side)
+ 24  19    9    0  # Layer 1 boundary (0.5 km)
+ 25  20   10    0  # Layer 2 boundary (3 km)
+ 26  21   11    0  # Layer 3 boundary (15 km)
+ 27  22   12    0  # Layer 4 boundary (25 km)
+ 28  23   13    0  # Bottom connection
+
+# Middle Block Continuous Layers (Top)
+ 29  14   19    0  # Layer 1 (0.5 km) across fault zone
+ 30  15   20    0  # Layer 2 (3 km) across fault zone
+
+# Middle Block Interrupted Layers (Cut by fault)
+ 31  16   30    0  # Layer 3 Left -> Fault
+ 32  30   21    0  # Fault -> Layer 3 Right
+ 33  17   31    0  # Layer 4 Left -> Fault
+ 34  31   22    0  # Fault -> Layer 4 Right
+
+# Vertical connections at x=80 (hanging wall side)
+ 35  24   14    0  # x=80, 0 to -0.5
+ 36  14   15    0  # x=80, -0.5 to -3
+ 37  15    6    0  # x=80, -3 to -5 (Fault Top)
+ 38   6   16    0  # x=80, -5 to -15
+ 39  16   17    0  # x=80, -15 to -25
+ 40  17   18    0  # x=80, -25 to -100
+
+# Vertical connections at x=140 (Footwall side)
+ 41  25   19    0  # x=140, 0 to -0.5
+ 42  19   20    0  # x=140, -0.5 to -3
+ 43  20   21    0  # x=140, -3 to -15
+ 44  21   22    0  # x=140, -15 to -25
+ 45  22    7    0  # x=140, -25 to -40
+ 46   7   23    0  # x=140, -40 to -100
+
+# Additional Closure / Helper segments
+# These segments are needed to define the boundaries of the regions.
+ 47   0   24    0  # Surface to fault projection (left side)
+ 48  25    8    0  # Surface to fault projection (right side)
+ 49   6   26    0  # Fault top to bottom corner (x=80)
+ 50   7   27    0  # Fault bottom to bottom corner (x=140)
+ 51  26   27    0  # Bottom connection between fault projections
+ 52  18   26    0  # Bottom at fault x=80 to bottom corner x=80
+ 53  23   27    0  # Bottom at fault x=140 to bottom corner x=140
+ 54  14    6    0  # Layer 1 to fault top (x=80)
+ 55  15    6    0  # Layer 2 to fault top (x=80)
+ 56  16    6    0  # Layer 3 to fault top (x=80)
+ 57  17    6    0  # Layer 4 to fault top (x=80)
+ 58  19    7    0  # Layer 1 to fault bottom (x=140)
+ 59  20    7    0  # Layer 2 to fault bottom (x=140)
+ 60  21    7    0  # Layer 3 to fault bottom (x=140)
+ 61  22    7    0  # Layer 4 to fault bottom (x=140)
+ 62  24    6    0  # Surface to fault top (x=80)
+ 63  25    7    0  # Surface to fault bottom (x=140)
+ 64  18   23    0  # Bottom connection across fault (duplicate of segment 9, but needed for region definition)
+ 65  26    5    0  # Bottom left connection (duplicate of segment 8, but needed for region definition)
+ 66  27   13    0  # Bottom right connection (duplicate of segment 10, but needed for region definition)
+ 67   1    2    0  # Left side layer connection (duplicate of segment 14, but needed for region definition)
+ 68   9   10    0  # Right side layer connection (duplicate of segment 4, but needed for region definition)
+ 69  11   12    0  # Right side layer connection (duplicate of segment 6, but needed for region definition)
+
+#### holes ####
+0
+
+#### regions ####
+# nregions
+  18
+# k  xk       zk        mattype  max_area
+
+# Hanging wall layers (materials 0-4)
+  0   40.0e3   -0.25e3   0        1.25e7    # HW Alluvium (0-0.5 km)
+  1   40.0e3   -1.75e3   1        1.25e7    # HW Tertiary (0.5-3 km)
+  2   40.0e3   -9.0e3    2        1.25e7    # HW Upper crust (3-15 km)
+  3   40.0e3  -20.0e3    3        1.25e7    # HW Middle crust (15-25 km)
+  4   40.0e3  -60.0e3    4        1.25e7    # HW Lower crust (25-100 km)
+
+# Footwall layers (materials 5-9 -> now using 0-4)
+  5  170.0e3   -0.25e3   0        1.25e7    # FW Alluvium (matches HW)
+  6  170.0e3   -1.75e3   1        1.25e7    # FW Tertiary (matches HW)
+  7  170.0e3   -9.0e3    2        1.25e7    # FW Upper crust (matches HW)
+  8  170.0e3  -20.0e3    3        1.25e7    # FW Middle crust (matches HW)
+  9  170.0e3  -60.0e3    4        1.25e7    # FW Lower crust (matches HW)
+
+# Middle Block Regions (80km < x < 140km) - Filling the gap
+# Top layers (Above fault -5km start)
+ 10  110.0e3   -0.25e3   0        1.25e7    # Middle Alluvium (0-0.5km)
+ 11  110.0e3   -1.75e3   1        1.25e7    # Middle Tertiary (0.5-3km)
+
+# Deep layers (Cut by fault) - Need seeds for both wedges
+# Upper Crust (3-15km)
+ 12  130.0e3   -10.0e3   2        1.25e7    # Middle HW Upper Crust (Right/Above fault)
+ 13   90.0e3   -14.0e3   2        1.25e7    # Middle FW Upper Crust (Left/Below fault)
+
+# Middle Crust (15-25km)
+ 14  130.0e3   -20.0e3   3        1.25e7    # Middle HW Middle Crust
+ 15   90.0e3   -20.0e3   3        1.25e7    # Middle FW Middle Crust
+
+# Lower Crust (25-100km)
+ 16  135.0e3   -30.0e3   4        1.25e7    # Middle HW Lower Crust
+ 17  110.0e3   -50.0e3   4        1.25e7    # Middle FW Lower Crust
